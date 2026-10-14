@@ -1,1 +1,39 @@
+/* File: Mode/dark.css */
 
+/* Overwrite Light Variables to Dark Variables */
+:root {
+    --bg-main: #0f172a;       /* Slate 900 */
+    --bg-card: #1e293b;       /* Slate 800 */
+    --text-main: #f8fafc;     /* Slate 50 */
+    --text-muted: #94a3b8;    /* Slate 400 */
+    --border-color: #334155;  /* Slate 700 */
+    --sidebar-bg: #1e293b;    /* Slate 800 */
+}
+
+/* Penyesuaian warna Hover Navigasi (Biar tidak terlalu terang di dark mode) */
+.nav-item:hover, .nav-item.active { 
+    background-color: #0f172a; 
+}
+
+/* Penyesuaian Outline Focus & Bayangan Shadow pada form */
+.form-group input:focus, .form-group select:focus { 
+    box-shadow: 0 0 0 3px #1e3a8a; 
+}
+
+/* Penyesuaian Table Head Hover (Biar nyambung dengan Dark Mode) */
+.data-table tbody tr:hover { 
+    background-color: #334155; 
+}
+
+/* Penyesuaian Badge (Biar tidak terlalu mencolok matanya) */
+.badge-gray { 
+    background: #334155; 
+    color: #cbd5e1; 
+}
+.badge-green {
+    background: #064e3b;
+    color: #34d399;
+}
+.badge {
+    border-color: var(--bg-card); /* Border lonceng notifikasi */
+}

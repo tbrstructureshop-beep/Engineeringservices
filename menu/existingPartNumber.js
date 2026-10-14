@@ -1,43 +1,17 @@
+// File: menu/existingPartNumber.js
+import { openEntryModal } from './entryModal.js';
+
 export function render(container) {
-    // 1. Injeksi HTML ke container
+    // 1. Injeksi HTML (Hanya Tombol Modal & Tabel 2 Baris)
     container.innerHTML = `
-        <!-- FORM PENGISIAN -->
-        <div class="card">
-            <h3 class="card-title"><i class="ph ph-clipboard-text"></i> Material Request Form</h3>
-            <form id="form-existing-pn">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label>Material Type</label>
-                        <select id="matl_type" required>
-                            <option value="TOOLS">TOOLS</option>
-                            <option value="CONSUMABLE">CONSUMABLE</option>
-                            <option value="SPAREPART">SPAREPART</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Material Description</label>
-                        <input type="text" id="matl_desc" placeholder="e.g. FREEZER" required autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label>Base Unit (UoM)</label>
-                        <input type="text" id="base_oum" placeholder="e.g. 2 EA" required autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label>Manufacturer PN</label>
-                        <input type="text" id="manu_mat" placeholder="e.g. CF1633N" required autocomplete="off">
-                    </div>
-                    <div class="form-group">
-                        <label>Dangerous Good</label>
-                        <select id="dangerous_good">
-                            <option value="NO">NO</option>
-                            <option value="YES">YES</option>
-                        </select>
-                    </div>
-                </div>
-                <button type="submit" class="btn-submit">
-                    <i class="ph ph-plus-circle"></i> Add to Tracking
-                </button>
-            </form>
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3 class="card-title" style="margin-bottom: 5px;"><i class="ph ph-hard-drives"></i> Existing Part Number</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Manage and track existing material processes to SAP.</p>
+            </div>
+            <button id="btn-add-pn" class="btn-submit" style="margin-top: 0;">
+                <i class="ph ph-plus-circle"></i> Add New Request
+            </button>
         </div>
 
         <!-- TABLE TRACKING DATA -->
@@ -46,18 +20,20 @@ export function render(container) {
             <div class="table-responsive">
                 <table class="data-table" id="table-pn">
                     <thead>
+                        <!-- ROW 1: DESKRIPSI -->
                         <tr>
-                            <th>Request</th>
-                            <th>Dangerous Good</th>
-                            <th>Shelf Life</th>
-                            <th>Requester</th>
-                            <th>NO</th>
+                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Request</th>
+                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Dangerous Good</th>
+                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Shelf Life</th>
+                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Requester</th>
+                            <th rowspan="2" style="border-right: 2px solid var(--border-color);">NO</th>
+                            
                             <th>MATERIAL TYPE</th>
                             <th>MATERIAL DESCRIPTION (SHORT TEXT)</th>
                             <th>BASE UNIT OF MEASURE</th>
                             <th>MANUFACTURER PART NUMBER</th>
                             <th>NUMBER OF A MANUFACTURER</th>
-                            <th>DOCUMENT NUMBER</th>
+                            <th>DOCUMENT NUMBER (WITHOUT DMS)</th>
                             <th>UNSERVICEABLE PLANT</th>
                             <th>UNSERSABLE STORAGE LOCATION</th>
                             <th>REFURBISHMENT PLANT</th>
@@ -70,6 +46,26 @@ export function render(container) {
                             <th>PURCHASING GROUP</th>
                             <th>AIRCRAFT REGISTRATION</th>
                         </tr>
+                        <!-- ROW 2: SAP CODE -->
+                        <tr style="background-color: var(--bg-main);">
+                            <th>MATL_TYPE</th>
+                            <th>MATL_DESC</th>
+                            <th>BASE_OUM</th>
+                            <th>MANU_MAT (PN)</th>
+                            <th>MFR NO (CAGE CODE)</th>
+                            <th>DOCUMENT</th>
+                            <th>ZZUWERKS</th>
+                            <th>ZZULGORT</th>
+                            <th>ZZRWERKS</th>
+                            <th>ZZRILGORT</th>
+                            <th>ZZRRLGORT</th>
+                            <th>ZZRARBPL</th>
+                            <th>ZZPWERKS</th>
+                            <th>ZZSLGORT</th>
+                            <th>ZZEQART</th>
+                            <th>EKGRP</th>
+                            <th>Reg</th>
+                        </tr>
                     </thead>
                     <tbody id="tbody-pn">
                         <!-- Rows injected via JS -->
@@ -79,7 +75,7 @@ export function render(container) {
         </div>
     `;
 
-    // 2. Data Initial (Sesuai Tabel Instruksi Prompt)
+    // 2. Data Initial
     let pnData = [
         {
             request: "EXISTING PN", dangerous: "NO", shelf: "NO", requester: "Muhammad Rizki F",
@@ -89,7 +85,7 @@ export function render(container) {
         }
     ];
 
-    // 3. Render Table
+    // 3. Fungsi Render Table
     function renderTable() {
         const tbody = document.getElementById('tbody-pn');
         tbody.innerHTML = ''; 
@@ -97,11 +93,12 @@ export function render(container) {
         pnData.forEach((row, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td><span class="status-badge badge-green">${row.request}</span></td>
-                <td><span class="status-badge badge-gray">${row.dangerous}</span></td>
-                <td><span class="status-badge badge-gray">${row.shelf}</span></td>
-                <td>${row.requester}</td>
-                <td>${index + 1}</td>
+                <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-green">${row.request}</span></td>
+                <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-gray">${row.dangerous}</span></td>
+                <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-gray">${row.shelf}</span></td>
+                <td style="border-right: 1px solid var(--border-color);">${row.requester}</td>
+                <td style="border-right: 2px solid var(--border-color); text-align: center;">${index + 1}</td>
+                
                 <td><strong>${row.type}</strong></td>
                 <td>${row.desc}</td>
                 <td>${row.uom}</td>
@@ -124,35 +121,44 @@ export function render(container) {
         });
     }
 
-    // Call first time
     renderTable();
 
-    // 4. Handle Submit Form
-    const form = document.getElementById('form-existing-pn');
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-
-        // Ambil Value
-        const newEntry = {
-            request: "EXISTING PN",
-            dangerous: document.getElementById('dangerous_good').value,
-            shelf: "NO", // Default
-            requester: "Muhammad Rizki F", // Hardcoded User Header
-            no: (pnData.length + 1).toString(),
-            type: document.getElementById('matl_type').value,
-            desc: document.getElementById('matl_desc').value.toUpperCase(),
-            uom: document.getElementById('base_oum').value.toUpperCase(),
-            pn: document.getElementById('manu_mat').value.toUpperCase(),
-            // Empty columns for existing fields
-            mfr: "", doc: "", unserv_plant: "", unserv_loc: "", ref_plant: "", ref_iss: "",
-            ref_rec: "", parent_shop: "", parent_plant: "", serv_loc: "", ac_type: "", pur_grp: "", reg: ""
-        };
-
-        // Push and update UI
-        pnData.push(newEntry);
-        renderTable();
+    // 4. Handle Klik Tombol "Add New Request" (Memanggil Modal)
+    document.getElementById('btn-add-pn').addEventListener('click', () => {
         
-        // Reset form inputs
-        form.reset();
+        // Konfigurasi Input apa saja yang dibutuhkan menu ini
+        const formFields = [
+            { id: 'matl_type', label: 'Material Type (MATL_TYPE)', type: 'select', options: ['TOOLS', 'CONSUMABLE', 'SPAREPART'], required: true },
+            { id: 'matl_desc', label: 'Material Description', type: 'text', placeholder: 'e.g. FREEZER', required: true },
+            { id: 'base_oum', label: 'Base Unit (BASE_OUM)', type: 'text', placeholder: 'e.g. 2 EA', required: true },
+            { id: 'manu_mat', label: 'Manufacturer PN (MANU_MAT)', type: 'text', placeholder: 'e.g. CF1633N', required: true },
+            { id: 'dangerous_good', label: 'Dangerous Good', type: 'select', options: ['NO', 'YES'], required: true }
+        ];
+
+        // Panggil Dynamic Modal
+        openEntryModal({
+            title: 'Submit Existing PN',
+            fields: formFields,
+            onSubmit: (formData) => {
+                // Logic setelah tombol submit modal di klik
+                const newEntry = {
+                    request: "EXISTING PN",
+                    dangerous: formData.dangerous_good,
+                    shelf: "NO", // Default
+                    requester: "Muhammad Rizki F", // Hardcoded
+                    no: (pnData.length + 1).toString(),
+                    type: formData.matl_type,
+                    desc: formData.matl_desc.toUpperCase(),
+                    uom: formData.base_oum.toUpperCase(),
+                    pn: formData.manu_mat.toUpperCase(),
+                    // Sisanya kosong sesuai requirement existing form
+                    mfr: "", doc: "", unserv_plant: "", unserv_loc: "", ref_plant: "", ref_iss: "",
+                    ref_rec: "", parent_shop: "", parent_plant: "", serv_loc: "", ac_type: "", pur_grp: "", reg: ""
+                };
+
+                pnData.push(newEntry);
+                renderTable();
+            }
+        });
     });
 }

@@ -1,25 +1,35 @@
 // File: menu/entryModal.js
 
 export function openEntryModal(config) {
-    // 1. Generate HTML untuk Form Inputs berdasarkan config
-    let htmlForm = `<div style="display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">`;
+    // 1. Generate HTML Grid Layout untuk menangani form puluhan input
+    // Menggunakan Grid 2 kolom dengan max-height agar bisa discroll jika inputnya banyak
+    let htmlForm = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; 
+                    margin-top: 15px; max-height: 65vh; overflow-y: auto; overflow-x: hidden; padding: 5px; text-align: left;">
+    `;
     
     config.fields.forEach(f => {
         htmlForm += `
-            <div style="display: flex; flex-direction: column; text-align: left; gap: 5px;">
-                <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">
+            <div style="display: flex; flex-direction: column; gap: 5px;">
+                <label style="font-size: 0.75rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">
                     ${f.label}
                 </label>
         `;
         
         if (f.type === 'select') {
-            htmlForm += `<select id="swal-input-${f.id}" class="swal2-input" style="margin: 0; width: 100%; font-size: 0.9rem; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">`;
+            htmlForm += `<select id="swal-input-${f.id}" class="swal2-input" 
+                style="margin: 0; width: 100%; height: 42px; font-size: 0.85rem; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">`;
+            
+            // Generate Option
             f.options.forEach(opt => {
-                htmlForm += `<option value="${opt}">${opt}</option>`;
+                htmlForm += `<option value="${opt.value || opt}">${opt.label || opt}</option>`;
             });
             htmlForm += `</select>`;
         } else {
-            htmlForm += `<input id="swal-input-${f.id}" type="text" class="swal2-input" placeholder="${f.placeholder || ''}" style="margin: 0; width: 100%; font-size: 0.9rem; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">`;
+            // Default ke input text
+            htmlForm += `<input id="swal-input-${f.id}" type="${f.type || 'text'}" class="swal2-input" 
+                placeholder="${f.placeholder || ''}" 
+                style="margin: 0; width: 100%; height: 42px; font-size: 0.85rem; background: var(--bg-card); color: var(--text-main); border: 1px solid var(--border-color);">`;
         }
         
         htmlForm += `</div>`;
@@ -29,37 +39,42 @@ export function openEntryModal(config) {
 
     // 2. Panggil SweetAlert2
     Swal.fire({
-        title: `<span style="color: var(--text-main)">${config.title}</span>`,
+        title: `<span style="color: var(--text-main); font-size: 1.25rem;">${config.title}</span>`,
         html: htmlForm,
-        background: 'var(--bg-card)', // Supaya support Dark Mode
+        width: '800px', // Diperlebar agar form 2 kolom proporsional
+        background: 'var(--bg-card)', 
         showCancelButton: true,
-        confirmButtonText: 'Submit Request',
+        confirmButtonText: '<i class="ph ph-paper-plane-right"></i> Submit Data',
         confirmButtonColor: 'var(--primary)',
         cancelButtonColor: '#64748b',
         focusConfirm: false,
         preConfirm: () => {
             const result = {};
-            // Ambil semua value dari input
+            // 3. Auto-baca Semua Value Berdasarkan Array Fields
             for (const f of config.fields) {
                 const val = document.getElementById(`swal-input-${f.id}`).value.trim();
+                
+                // Validasi Otomatis Jika Required
                 if (f.required && !val) {
-                    Swal.showValidationMessage(`Field "${f.label}" tidak boleh kosong!`);
+                    Swal.showValidationMessage(`Kolom <b>${f.label}</b> tidak boleh kosong!`);
                     return false;
                 }
-                result[f.id] = val;
+                
+                // Ubah otomatis menjadi UPPERCASE jika diminta
+                result[f.id] = f.uppercase ? val.toUpperCase() : val;
             }
             return result;
         }
     }).then((result) => {
         if (result.isConfirmed) {
-            // Lempar data ke menu yang memanggil
+            // Lempar data ke menu pemanggil
             config.onSubmit(result.value);
             
-            // Sweet Listener: Notifikasi Sukses
+            // Notifikasi Sukses
             Swal.fire({
                 icon: 'success',
-                title: 'Data Terkirim!',
-                text: 'Material request berhasil ditambahkan ke tracker.',
+                title: 'Berhasil!',
+                text: 'Data material berhasil masuk ke dalam tracker.',
                 background: 'var(--bg-card)',
                 color: 'var(--text-main)',
                 timer: 2000,

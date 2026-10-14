@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SAP Material Dashboard</title>
+    <title>GMF Engineering Services</title>
     
     <!-- Modern Font: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -13,15 +13,16 @@
     <!-- CSS UTAMA -->
     <style>
         :root {
-            --primary: #2563eb; /* Modern Blue */
+            --primary: #2563eb; 
             --primary-hover: #1d4ed8;
-            --bg-main: #f8fafc; /* Light Slate */
+            --bg-main: #f8fafc; 
             --bg-card: #ffffff;
             --text-main: #0f172a;
             --text-muted: #64748b;
             --border-color: #e2e8f0;
             --sidebar-bg: #ffffff;
             --font-family: 'Inter', sans-serif;
+            --sidebar-width: 260px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -33,17 +34,27 @@
             display: flex;
             height: 100vh;
             overflow: hidden;
+            transition: background-color 0.3s, color 0.3s;
         }
 
         /* --- Sidebar --- */
         .sidebar {
-            width: 260px;
+            width: var(--sidebar-width);
             background-color: var(--sidebar-bg);
             border-right: 1px solid var(--border-color);
             display: flex;
             flex-direction: column;
-            transition: transform 0.3s ease;
+            transition: all 0.3s ease;
             z-index: 50;
+            overflow-x: hidden;
+            white-space: nowrap;
+        }
+
+        /* Kelas untuk menyembunyikan sidebar di desktop */
+        .sidebar.collapsed {
+            width: 0;
+            min-width: 0;
+            border-right: none;
         }
 
         .sidebar-logo {
@@ -51,14 +62,21 @@
             display: flex;
             align-items: center;
             padding: 0 24px;
-            font-size: 1.25rem;
             font-weight: 700;
             color: var(--primary);
             border-bottom: 1px solid var(--border-color);
-            gap: 10px;
+            gap: 12px;
+            min-width: var(--sidebar-width); /* Mencegah logo hancur saat collapse */
+        }
+        
+        .sidebar-logo i { font-size: 1.5rem; }
+        .sidebar-logo span {
+            font-size: 0.95rem;
+            line-height: 1.2;
+            white-space: normal;
         }
 
-        .sidebar-nav { padding: 20px 16px; display: flex; flex-direction: column; gap: 8px; }
+        .sidebar-nav { padding: 20px 16px; display: flex; flex-direction: column; gap: 8px; min-width: var(--sidebar-width);}
 
         .nav-item {
             display: flex; align-items: center; padding: 12px 16px;
@@ -73,19 +91,28 @@
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 
         .top-header {
-            height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border-color);
+            height: 70px; background-color: var(--bg-card); border-bottom: 1px solid var(--border-color);
             display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+            transition: background-color 0.3s, border-color 0.3s;
         }
 
         .header-left { display: flex; align-items: center; gap: 16px; }
         .header-left h2 { font-size: 1.25rem; font-weight: 600; }
-        .menu-toggle { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+        
+        /* Tombol Icon General */
+        .icon-btn { 
+            background: none; border: none; font-size: 1.5rem; 
+            cursor: pointer; color: var(--text-muted); 
+            display: flex; align-items: center; justify-content: center;
+            transition: color 0.2s;
+        }
+        .icon-btn:hover { color: var(--primary); }
 
-        .header-right { display: flex; align-items: center; gap: 24px; }
-        .notification { position: relative; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
-        .badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid #fff;}
+        .header-right { display: flex; align-items: center; gap: 20px; }
+        .notification { position: relative; }
+        .badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid var(--bg-card);}
 
-        .user-profile { display: flex; align-items: center; gap: 12px; }
+        .user-profile { display: flex; align-items: center; gap: 12px; padding-left: 10px; border-left: 1px solid var(--border-color);}
         .avatar {
             width: 40px; height: 40px; border-radius: 50%;
             background-color: #dbeafe; color: var(--primary);
@@ -93,21 +120,21 @@
             font-weight: 700; font-size: 0.9rem;
         }
         .user-info { display: flex; flex-direction: column; }
-        .user-name { font-size: 0.875rem; font-weight: 600; }
+        .user-name { font-size: 0.875rem; font-weight: 600; color: var(--text-main);}
         .user-role { font-size: 0.75rem; color: var(--text-muted); }
 
         /* --- App Container (Dynamic Area) --- */
         .app-container { padding: 24px; overflow-y: auto; flex: 1; }
 
         /* --- Komponen untuk Modul JS --- */
-        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: background-color 0.3s, border-color 0.3s; }
         .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-main); display: flex; align-items: center; gap: 8px;}
         
         .table-responsive { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;}
         .data-table { width: 100%; border-collapse: collapse; min-width: 2500px; font-size: 0.875rem; }
         .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-        .data-table th { background-color: #f8fafc; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
-        .data-table tbody tr:hover { background-color: #f1f5f9; }
+        .data-table th { background-color: var(--bg-main); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+        .data-table tbody tr:hover { opacity: 0.8; }
 
         .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
         .badge-green { background: #dcfce7; color: #166534; }
@@ -116,7 +143,11 @@
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
         .form-group { display: flex; flex-direction: column; gap: 6px; }
         .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
-        .form-group input, .form-group select { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; font-family: inherit; font-size: 0.9rem;}
+        .form-group input, .form-group select { 
+            padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; 
+            outline: none; font-family: inherit; font-size: 0.9rem;
+            background-color: var(--bg-card); color: var(--text-main);
+        }
         .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px #eff6ff; }
         
         .btn-submit { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s; margin-top: 16px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem;}
@@ -126,6 +157,9 @@
         @media (max-width: 768px) {
             .sidebar { position: fixed; height: 100vh; transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
+            /* Kembalikan width normal di mobile walau class collapsed aktif */
+            .sidebar.collapsed { width: var(--sidebar-width); } 
+            .user-info { display: none; }
         }
     </style>
 </head>
@@ -134,16 +168,14 @@
     <!-- SIDEBAR -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-logo">
-            <i class="ph-fill ph-hexagon"></i>
-            <span>SAP Hub</span>
+            <i class="ph-fill ph-airplane-tilt"></i>
+            <span>GMF Engineering<br>Services</span>
         </div>
         <nav class="sidebar-nav" id="sidebar-nav">
-            <!-- Panggil data-menu sesuai nama file di folder menu/ -->
             <a href="#" class="nav-item active" data-menu="existingPartNumber" data-title="Existing Part Number">
                 <i class="ph ph-hard-drives"></i>
                 <span>Existing PN</span>
             </a>
-            <!-- Contoh menu masa depan: menu/newMaterial.js -->
             <a href="#" class="nav-item" data-menu="newMaterial" data-title="New Material Request">
                 <i class="ph ph-plus-square"></i>
                 <span>New Material</span>
@@ -156,17 +188,23 @@
         <!-- HEADER -->
         <header class="top-header">
             <div class="header-left">
-                <button class="menu-toggle" id="menu-toggle">
+                <button class="icon-btn" id="menu-toggle">
                     <i class="ph ph-list"></i>
                 </button>
                 <h2 id="page-title">Existing Part Number</h2>
             </div>
             
             <div class="header-right">
-                <div class="notification">
+                <!-- DARK MODE TOGGLE -->
+                <button class="icon-btn" id="theme-toggle" title="Toggle Dark Mode">
+                    <i class="ph ph-moon"></i>
+                </button>
+
+                <div class="icon-btn notification">
                     <i class="ph ph-bell"></i>
                     <span class="badge"></span>
                 </div>
+                
                 <!-- USER PROFILE -->
                 <div class="user-profile">
                     <div class="avatar">MR</div>
@@ -179,12 +217,10 @@
         </header>
 
         <!-- CONTAINER UNTUK MODULE -->
-        <div id="app-container" class="app-container">
-            <!-- Konten JS akan dimuat di sini -->
-        </div>
+        <div id="app-container" class="app-container"></div>
     </main>
 
-    <!-- JAVASCRIPT UTAMA (ROUTING) -->
+    <!-- JAVASCRIPT UTAMA -->
     <script type="module">
         document.addEventListener('DOMContentLoaded', () => {
             const appContainer = document.getElementById('app-container');
@@ -192,26 +228,58 @@
             const navItems = document.querySelectorAll('.nav-item');
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.getElementById('sidebar');
+            const themeToggle = document.getElementById('theme-toggle');
+            const themeIcon = themeToggle.querySelector('i');
 
-            // Toggle menu untuk Mobile
+            // --- 1. LOGIKA TOGGLE SIDEBAR (DRAWER) ---
             menuToggle.addEventListener('click', () => {
-                sidebar.classList.toggle('open');
+                if (window.innerWidth <= 768) {
+                    sidebar.classList.toggle('open'); // Mobile: geser masuk/keluar
+                } else {
+                    sidebar.classList.toggle('collapsed'); // Desktop: sembunyikan width
+                }
             });
 
-            // FUNGSI DYNAMIC IMPORT: Memanggil file sesuai data-menu
+            // --- 2. LOGIKA DARK MODE (Load file Mode/dark.css) ---
+            let isDarkMode = localStorage.getItem('darkMode') === 'true';
+
+            function applyTheme(dark) {
+                if (dark) {
+                    // Tambah <link> dark.css jika belum ada
+                    if (!document.getElementById('dark-css-file')) {
+                        const link = document.createElement('link');
+                        link.id = 'dark-css-file';
+                        link.rel = 'stylesheet';
+                        link.href = 'Mode/dark.css'; // Path sesuai request
+                        document.head.appendChild(link);
+                    }
+                    themeIcon.classList.replace('ph-moon', 'ph-sun');
+                } else {
+                    // Hapus <link> dark.css
+                    const link = document.getElementById('dark-css-file');
+                    if (link) link.remove();
+                    themeIcon.classList.replace('ph-sun', 'ph-moon');
+                }
+            }
+
+            // Terapkan saat pertama kali web diload
+            applyTheme(isDarkMode);
+
+            themeToggle.addEventListener('click', () => {
+                isDarkMode = !isDarkMode;
+                localStorage.setItem('darkMode', isDarkMode);
+                applyTheme(isDarkMode);
+            });
+
+            // --- 3. LOGIKA DYNAMIC IMPORT MENU ---
             async function loadMenu(menuName, title) {
-                appContainer.innerHTML = `<div style="text-align:center; padding: 50px; color:#64748b;"><i class="ph ph-spinner ph-spin" style="font-size: 2rem;"></i><p>Loading module...</p></div>`;
+                appContainer.innerHTML = `<div style="text-align:center; padding: 50px; color:var(--text-muted);"><i class="ph ph-spinner ph-spin" style="font-size: 2rem;"></i><p>Loading module...</p></div>`;
                 pageTitle.textContent = title;
                 
                 try {
-                    // Import dinamis ke directory menu/
                     const module = await import(`./menu/${menuName}.js`);
-                    appContainer.innerHTML = ''; // bersihkan loader
-                    
-                    // Render isi module ke container
-                    if (module.render) {
-                        module.render(appContainer);
-                    }
+                    appContainer.innerHTML = '';
+                    if (module.render) module.render(appContainer);
                 } catch (error) {
                     console.error("Gagal meload menu:", error);
                     appContainer.innerHTML = `
@@ -223,26 +291,22 @@
                 }
             }
 
-            // Event klik pada sidebar
             navItems.forEach(item => {
                 item.addEventListener('click', (e) => {
                     e.preventDefault();
-                    
-                    // Ganti menu aktif
                     navItems.forEach(nav => nav.classList.remove('active'));
                     item.classList.add('active');
 
-                    // Dapatkan nama menu dari atribut data
                     const menuName = item.getAttribute('data-menu');
                     const menuTitle = item.getAttribute('data-title');
                     
                     loadMenu(menuName, menuTitle);
-
+                    
+                    // Otomatis tutup sidebar di mobile setelah klik menu
                     if (window.innerWidth <= 768) sidebar.classList.remove('open');
                 });
             });
 
-            // Load menu pertama secara default
             loadMenu('existingPartNumber', 'Existing Part Number');
         });
     </script>

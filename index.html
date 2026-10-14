@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAP Material Dashboard</title>
+    
+    <!-- Modern Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons (Modern SVG Icons) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- CSS UTAMA -->
+    <style>
+        :root {
+            --primary: #2563eb; /* Modern Blue */
+            --primary-hover: #1d4ed8;
+            --bg-main: #f8fafc; /* Light Slate */
+            --bg-card: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border-color: #e2e8f0;
+            --sidebar-bg: #ffffff;
+            --font-family: 'Inter', sans-serif;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* --- Sidebar --- */
+        .sidebar {
+            width: 260px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 50;
+        }
+
+        .sidebar-logo {
+            height: 70px;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-bottom: 1px solid var(--border-color);
+            gap: 10px;
+        }
+
+        .sidebar-nav { padding: 20px 16px; display: flex; flex-direction: column; gap: 8px; }
+
+        .nav-item {
+            display: flex; align-items: center; padding: 12px 16px;
+            color: var(--text-muted); text-decoration: none;
+            border-radius: 8px; font-weight: 500; gap: 12px; transition: all 0.2s;
+        }
+
+        .nav-item i { font-size: 1.25rem; }
+        .nav-item:hover, .nav-item.active { background-color: #eff6ff; color: var(--primary); }
+
+        /* --- Main Content --- */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+
+        .top-header {
+            height: 70px; background-color: #ffffff; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between; padding: 0 24px;
+        }
+
+        .header-left { display: flex; align-items: center; gap: 16px; }
+        .header-left h2 { font-size: 1.25rem; font-weight: 600; }
+        .menu-toggle { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
+
+        .header-right { display: flex; align-items: center; gap: 24px; }
+        .notification { position: relative; font-size: 1.5rem; color: var(--text-muted); cursor: pointer; }
+        .badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid #fff;}
+
+        .user-profile { display: flex; align-items: center; gap: 12px; }
+        .avatar {
+            width: 40px; height: 40px; border-radius: 50%;
+            background-color: #dbeafe; color: var(--primary);
+            display: flex; justify-content: center; align-items: center;
+            font-weight: 700; font-size: 0.9rem;
+        }
+        .user-info { display: flex; flex-direction: column; }
+        .user-name { font-size: 0.875rem; font-weight: 600; }
+        .user-role { font-size: 0.75rem; color: var(--text-muted); }
+
+        /* --- App Container (Dynamic Area) --- */
+        .app-container { padding: 24px; overflow-y: auto; flex: 1; }
+
+        /* --- Komponen untuk Modul JS --- */
+        .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-main); display: flex; align-items: center; gap: 8px;}
+        
+        .table-responsive { width: 100%; overflow-x: auto; border: 1px solid var(--border-color); border-radius: 8px;}
+        .data-table { width: 100%; border-collapse: collapse; min-width: 2500px; font-size: 0.875rem; }
+        .data-table th, .data-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
+        .data-table th { background-color: #f8fafc; color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+        .data-table tbody tr:hover { background-color: #f1f5f9; }
+
+        .status-badge { padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 600; }
+        .badge-green { background: #dcfce7; color: #166534; }
+        .badge-gray { background: #f1f5f9; color: #475569; }
+        
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+        .form-group { display: flex; flex-direction: column; gap: 6px; }
+        .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; }
+        .form-group input, .form-group select { padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 6px; outline: none; font-family: inherit; font-size: 0.9rem;}
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px #eff6ff; }
+        
+        .btn-submit { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s; margin-top: 16px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem;}
+        .btn-submit:hover { background: var(--primary-hover); }
+
+        /* Responsive Mobile */
+        @media (max-width: 768px) {
+            .sidebar { position: fixed; height: 100vh; transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-logo">
+            <i class="ph-fill ph-hexagon"></i>
+            <span>SAP Hub</span>
+        </div>
+        <nav class="sidebar-nav" id="sidebar-nav">
+            <!-- Panggil data-menu sesuai nama file di folder menu/ -->
+            <a href="#" class="nav-item active" data-menu="existingPartNumber" data-title="Existing Part Number">
+                <i class="ph ph-hard-drives"></i>
+                <span>Existing PN</span>
+            </a>
+            <!-- Contoh menu masa depan: menu/newMaterial.js -->
+            <a href="#" class="nav-item" data-menu="newMaterial" data-title="New Material Request">
+                <i class="ph ph-plus-square"></i>
+                <span>New Material</span>
+            </a>
+        </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <!-- HEADER -->
+        <header class="top-header">
+            <div class="header-left">
+                <button class="menu-toggle" id="menu-toggle">
+                    <i class="ph ph-list"></i>
+                </button>
+                <h2 id="page-title">Existing Part Number</h2>
+            </div>
+            
+            <div class="header-right">
+                <div class="notification">
+                    <i class="ph ph-bell"></i>
+                    <span class="badge"></span>
+                </div>
+                <!-- USER PROFILE -->
+                <div class="user-profile">
+                    <div class="avatar">MR</div>
+                    <div class="user-info">
+                        <span class="user-name">Muhammad Rizki F</span>
+                        <span class="user-role">Requester</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTAINER UNTUK MODULE -->
+        <div id="app-container" class="app-container">
+            <!-- Konten JS akan dimuat di sini -->
+        </div>
+    </main>
+
+    <!-- JAVASCRIPT UTAMA (ROUTING) -->
+    <script type="module">
+        document.addEventListener('DOMContentLoaded', () => {
+            const appContainer = document.getElementById('app-container');
+            const pageTitle = document.getElementById('page-title');
+            const navItems = document.querySelectorAll('.nav-item');
+            const menuToggle = document.getElementById('menu-toggle');
+            const sidebar = document.getElementById('sidebar');
+
+            // Toggle menu untuk Mobile
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            // FUNGSI DYNAMIC IMPORT: Memanggil file sesuai data-menu
+            async function loadMenu(menuName, title) {
+                appContainer.innerHTML = `<div style="text-align:center; padding: 50px; color:#64748b;"><i class="ph ph-spinner ph-spin" style="font-size: 2rem;"></i><p>Loading module...</p></div>`;
+                pageTitle.textContent = title;
+                
+                try {
+                    // Import dinamis ke directory menu/
+                    const module = await import(`./menu/${menuName}.js`);
+                    appContainer.innerHTML = ''; // bersihkan loader
+                    
+                    // Render isi module ke container
+                    if (module.render) {
+                        module.render(appContainer);
+                    }
+                } catch (error) {
+                    console.error("Gagal meload menu:", error);
+                    appContainer.innerHTML = `
+                        <div class="card" style="border-left: 4px solid #ef4444;">
+                            <h3 class="card-title" style="color:#ef4444;"><i class="ph ph-warning-circle"></i> Module Not Found</h3>
+                            <p>File <strong>menu/${menuName}.js</strong> belum dibuat atau terjadi error.</p>
+                        </div>
+                    `;
+                }
+            }
+
+            // Event klik pada sidebar
+            navItems.forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    
+                    // Ganti menu aktif
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    item.classList.add('active');
+
+                    // Dapatkan nama menu dari atribut data
+                    const menuName = item.getAttribute('data-menu');
+                    const menuTitle = item.getAttribute('data-title');
+                    
+                    loadMenu(menuName, menuTitle);
+
+                    if (window.innerWidth <= 768) sidebar.classList.remove('open');
+                });
+            });
+
+            // Load menu pertama secara default
+            loadMenu('existingPartNumber', 'Existing Part Number');
+        });
+    </script>
+</body>
+</html>

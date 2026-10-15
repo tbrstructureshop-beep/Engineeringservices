@@ -1,5 +1,6 @@
 // File: menu/existingPartNumber.js
 import { openEntryModal } from './modal/entryExistingPNModal.js'; 
+import { openNotifModal } from './modal/notifExistingPNModal.js'; // <-- Tambahkan import ini
 
 export function render(container) {
     container.innerHTML = `
@@ -58,6 +59,7 @@ export function render(container) {
         
         <div id="global-dropdown" class="dropdown-content-fixed">
             <div class="dropdown-item btn-detail" id="dd-detail"><i class="ph ph-eye"></i> View Detail / Edit</div>
+            <div class="dropdown-item" id="dd-notif"><i class="ph ph-envelope-simple"></i> Outlook Notification</div>
             <div class="dropdown-item text-red btn-delete" id="dd-delete"><i class="ph ph-trash"></i> Delete Ticket</div>
         </div>
     `;
@@ -179,6 +181,12 @@ export function render(container) {
                 }
             });
         }
+    });
+
+    // EVENT LISTENER BUKA NOTIFIKASI EMAIL OUTLOOK
+    document.getElementById('dd-notif').addEventListener('click', () => {
+        const ticket = ticketData[activeDropdownIndex];
+        openNotifModal(ticket);
     });
 
     // 5. DETAIL VIEW / EDIT MODAL

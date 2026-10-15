@@ -102,8 +102,8 @@ export function openUserModal(userData = {}) {
                         background: 'var(--bg-card)',
                         color: 'var(--text-main)'
                     }).then(() => {
-                        // Redirect otomatis ke menu/loginPage.html
-                        window.location.href = 'menu/loginPage.html';
+                        // GANTI href MENJADI replace
+                        window.location.replace('menu/loginPage.html');
                     });
                 }
             });

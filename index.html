@@ -52,7 +52,6 @@
             white-space: nowrap;
         }
 
-        /* Kelas untuk menyembunyikan sidebar di desktop */
         .sidebar.collapsed {
             width: 0;
             min-width: 0;
@@ -68,7 +67,7 @@
             color: var(--primary);
             border-bottom: 1px solid var(--border-color);
             gap: 12px;
-            min-width: var(--sidebar-width); /* Mencegah logo hancur saat collapse */
+            min-width: var(--sidebar-width);
         }
         
         .sidebar-logo i { font-size: 1.5rem; }
@@ -101,7 +100,6 @@
         .header-left { display: flex; align-items: center; gap: 16px; }
         .header-left h2 { font-size: 1.25rem; font-weight: 600; }
         
-        /* Tombol Icon General */
         .icon-btn { 
             background: none; border: none; font-size: 1.5rem; 
             cursor: pointer; color: var(--text-muted); 
@@ -114,13 +112,21 @@
         .notification { position: relative; }
         .badge { position: absolute; top: 0; right: 0; width: 10px; height: 10px; background: #ef4444; border-radius: 50%; border: 2px solid var(--bg-card);}
 
-        .user-profile { display: flex; align-items: center; gap: 12px; padding-left: 10px; border-left: 1px solid var(--border-color);}
+        /* Clickable User Profile */
+        .user-profile { 
+            display: flex; align-items: center; gap: 12px; padding-left: 10px; border-left: 1px solid var(--border-color);
+            cursor: pointer; padding-right: 6px; padding-top: 4px; padding-bottom: 4px; border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+        .user-profile:hover { background-color: var(--bg-main); }
         .avatar {
             width: 40px; height: 40px; border-radius: 50%;
             background-color: #dbeafe; color: var(--primary);
             display: flex; justify-content: center; align-items: center;
             font-weight: 700; font-size: 0.9rem;
+            transition: transform 0.2s;
         }
+        .user-profile:hover .avatar { transform: scale(1.05); }
         .user-info { display: flex; flex-direction: column; }
         .user-name { font-size: 0.875rem; font-weight: 600; color: var(--text-main);}
         .user-role { font-size: 0.75rem; color: var(--text-muted); }
@@ -128,7 +134,6 @@
         /* --- App Container (Dynamic Area) --- */
         .app-container { padding: 24px; overflow-y: auto; flex: 1; }
 
-        /* --- Komponen untuk Modul JS --- */
         .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 24px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); transition: background-color 0.3s, border-color 0.3s; }
         .card-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 20px; color: var(--text-main); display: flex; align-items: center; gap: 8px;}
         
@@ -155,11 +160,9 @@
         .btn-submit { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 500; cursor: pointer; transition: 0.2s; margin-top: 16px; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem;}
         .btn-submit:hover { background: var(--primary-hover); }
 
-        /* Responsive Mobile */
         @media (max-width: 768px) {
             .sidebar { position: fixed; height: 100vh; transform: translateX(-100%); }
             .sidebar.open { transform: translateX(0); }
-            /* Kembalikan width normal di mobile walau class collapsed aktif */
             .sidebar.collapsed { width: var(--sidebar-width); } 
             .user-info { display: none; }
         }
@@ -207,9 +210,9 @@
                     <span class="badge"></span>
                 </div>
                 
-                <!-- USER PROFILE -->
-                <div class="user-profile">
-                    <div class="avatar">MR</div>
+                <!-- USER PROFILE (Klik untuk buka modal detail & logout) -->
+                <div class="user-profile" id="user-profile-btn" title="Click to view User Profile & Logout">
+                    <div class="avatar" id="avatar-initial">MR</div>
                     <div class="user-info">
                         <span class="user-name">Muhammad Rizki F</span>
                         <span class="user-role">Requester</span>
@@ -224,6 +227,8 @@
 
     <!-- JAVASCRIPT UTAMA -->
     <script type="module">
+        import { openUserModal } from './menu/modal/logOut.js';
+
         document.addEventListener('DOMContentLoaded', () => {
             const appContainer = document.getElementById('app-container');
             const pageTitle = document.getElementById('page-title');
@@ -232,39 +237,48 @@
             const sidebar = document.getElementById('sidebar');
             const themeToggle = document.getElementById('theme-toggle');
             const themeIcon = themeToggle.querySelector('i');
+            const userProfileBtn = document.getElementById('user-profile-btn');
+
+            // --- USER PROFILE & LOGOUT MODAL ---
+            userProfileBtn.addEventListener('click', () => {
+                openUserModal({
+                    name: "Muhammad Rizki F",
+                    initials: "MR",
+                    empId: "584920",
+                    unit: "TCP-10 (Engineering Support)",
+                    role: "Requester"
+                });
+            });
 
             // --- 1. LOGIKA TOGGLE SIDEBAR (DRAWER) ---
             menuToggle.addEventListener('click', () => {
                 if (window.innerWidth <= 768) {
-                    sidebar.classList.toggle('open'); // Mobile: geser masuk/keluar
+                    sidebar.classList.toggle('open');
                 } else {
-                    sidebar.classList.toggle('collapsed'); // Desktop: sembunyikan width
+                    sidebar.classList.toggle('collapsed');
                 }
             });
 
-            // --- 2. LOGIKA DARK MODE (Load file Mode/dark.css) ---
+            // --- 2. LOGIKA DARK MODE ---
             let isDarkMode = localStorage.getItem('darkMode') === 'true';
 
             function applyTheme(dark) {
                 if (dark) {
-                    // Tambah <link> dark.css jika belum ada
                     if (!document.getElementById('dark-css-file')) {
                         const link = document.createElement('link');
                         link.id = 'dark-css-file';
                         link.rel = 'stylesheet';
-                        link.href = 'Mode/dark.css'; // Path sesuai request
+                        link.href = 'Mode/dark.css';
                         document.head.appendChild(link);
                     }
                     themeIcon.classList.replace('ph-moon', 'ph-sun');
                 } else {
-                    // Hapus <link> dark.css
                     const link = document.getElementById('dark-css-file');
                     if (link) link.remove();
                     themeIcon.classList.replace('ph-sun', 'ph-moon');
                 }
             }
 
-            // Terapkan saat pertama kali web diload
             applyTheme(isDarkMode);
 
             themeToggle.addEventListener('click', () => {
@@ -304,7 +318,6 @@
                     
                     loadMenu(menuName, menuTitle);
                     
-                    // Otomatis tutup sidebar di mobile setelah klik menu
                     if (window.innerWidth <= 768) sidebar.classList.remove('open');
                 });
             });

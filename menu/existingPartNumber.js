@@ -1,71 +1,54 @@
 // File: menu/existingPartNumber.js
-
-// Perhatikan path import baru ini
-import { openEntryModal } from './modal/entryModal.js'; 
+import { openEntryModal } from './modal/entryExistingPNModal.js'; 
 
 export function render(container) {
+    // 1. INJEKSI HTML & CSS (CSS untuk Action Dropdown)
     container.innerHTML = `
+        <style>
+            /* CSS untuk Dropdown Action (Titik Tiga) */
+            .action-dropdown { position: relative; display: inline-block; }
+            .action-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); transition: 0.2s; padding: 4px; border-radius: 4px;}
+            .action-btn:hover { background: var(--bg-main); color: var(--primary); }
+            
+            .dropdown-content {
+                display: none; position: absolute; right: 0; top: 100%;
+                background-color: var(--bg-card); min-width: 140px;
+                box-shadow: 0px 4px 12px rgba(0,0,0,0.1); z-index: 10;
+                border-radius: 8px; border: 1px solid var(--border-color);
+                overflow: hidden; flex-direction: column; text-align: left;
+            }
+            .dropdown-content.show { display: flex; }
+            .dropdown-item {
+                padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-main); font-weight: 500;
+            }
+            .dropdown-item:hover { background-color: var(--bg-main); }
+            .dropdown-item.text-red { color: #ef4444; }
+            .dropdown-item.text-red:hover { background-color: #fef2f2; }
+        </style>
+
         <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
             <div>
                 <h3 class="card-title" style="margin-bottom: 5px;"><i class="ph ph-hard-drives"></i> Existing Part Number</h3>
-                <p style="font-size: 0.85rem; color: var(--text-muted);">Tracker & Material Input Dashboard.</p>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Manage material tracking.</p>
             </div>
             <button id="btn-add-pn" class="btn-submit" style="margin-top: 0;">
                 <i class="ph ph-plus-circle"></i> Input New Data
             </button>
         </div>
 
+        <!-- TABEL RINGKAS -->
         <div class="card">
-            <h3 class="card-title"><i class="ph ph-table"></i> Tracking Process Material SAP</h3>
+            <h3 class="card-title"><i class="ph ph-table"></i> Track Material SAP</h3>
             <div class="table-responsive">
-                <table class="data-table" id="table-pn">
+                <table class="data-table" id="table-pn" style="min-width: 100%;">
                     <thead>
                         <tr>
-                            <th rowspan="2" style="border-right: 2px solid var(--border-color); text-align:center;">Action</th>
-                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Ticket No</th>
-                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Status</th>
-                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Request</th>
-                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Dangerous Good</th>
-                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Shelf Life</th>
-                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Requester</th>
-                            <th rowspan="2" style="border-right: 2px solid var(--border-color);">NO</th>
-                            
-                            <th>MATERIAL TYPE</th>
-                            <th>MATERIAL DESCRIPTION (SHORT TEXT)</th>
-                            <th>BASE UNIT OF MEASURE</th>
-                            <th>MANUFACTURER PART NUMBER</th>
-                            <th>NUMBER OF A MANUFACTURER</th>
-                            <th>DOCUMENT NUMBER</th>
-                            <th>UNSERVICEABLE PLANT</th>
-                            <th>UNSERSABLE STORAGE LOCATION</th>
-                            <th>REFURBISHMENT PLANT</th>
-                            <th>REFURBISHMENT ISSUE ST LOC</th>
-                            <th>REFURBISHMENT RECEIPT ST LOC</th>
-                            <th>PARENT SHOP</th>
-                            <th>PARENT SHOP PLANT</th>
-                            <th>SERVICEABLE STORE LOCATION</th>
-                            <th>TYPE OF TECH OBJECT (A/C TYPE)</th>
-                            <th>PURCHASING GROUP</th>
-                            <th>AIRCRAFT REGISTRATION</th>
-                        </tr>
-                        <tr style="background-color: var(--bg-main);">
-                            <th>MATL_TYPE</th>
-                            <th>MATL_DESC</th>
-                            <th>BASE_OUM</th>
+                            <th>Ticket No</th>
+                            <th>Status</th>
+                            <th>Request Type</th>
+                            <th>Requester</th>
                             <th>MANU_MAT (PN)</th>
-                            <th>MFR NO (CAGE CODE)</th>
-                            <th>DOCUMENT</th>
-                            <th>ZZUWERKS</th>
-                            <th>ZZULGORT</th>
-                            <th>ZZRWERKS</th>
-                            <th>ZZRILGORT</th>
-                            <th>ZZRRLGORT</th>
-                            <th>ZZRARBPL</th>
-                            <th>ZZPWERKS</th>
-                            <th>ZZSLGORT</th>
-                            <th>ZZEQART</th>
-                            <th>EKGRP</th>
-                            <th>Reg</th>
+                            <th style="text-align:center;">Action</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-pn"></tbody>
@@ -74,26 +57,28 @@ export function render(container) {
         </div>
     `;
 
-    // DATA STATE (Mockup dengan Tiket dan Status)
+    // 2. DATA STATE (Lengkap di memori, tapi ringkas di tampilan)
     let pnData = [
         {
-            ticket: "TKT-202610-001", status: "Received", // <--- FITUR TIKET & STATUS
-            request: "EXISTING PN", dangerous: "NO", shelf: "NO", requester: "Muhammad Rizki F",
-            no: "1", type: "TOOLS", desc: "FREEZER", uom: "2 EA", pn: "CF1633N",
-            mfr: "", doc: "", unserv_plant: "", unserv_loc: "", ref_plant: "", ref_iss: "",
-            ref_rec: "", parent_shop: "", parent_plant: "", serv_loc: "", ac_type: "", pur_grp: "", reg: ""
+            ticket: "492018", status: "Received", request: "EXISTING PN", 
+            requester: "Muhammad Rizki F", dept: "TCP-10", pn: "CF1633N",
+            dangerous: "NO", shelf: "NO", type: "TOOLS", desc: "FREEZER", 
+            uom: "2 EA", mfr: "MFR01", doc: "DOC-99", unserv_plant: "P1", 
+            unserv_loc: "L1", ref_plant: "R1", ref_iss: "I1", ref_rec: "RC1",
+            parent_shop: "PS1", parent_plant: "PP1", serv_loc: "SL1", 
+            ac_type: "A320", pur_grp: "PG1", reg: "PK-GMF"
         }
     ];
 
-    // FUNGSI WARNA STATUS DINAMIS
+    // Status Warna
     function getStatusStyle(status) {
-        if (status === 'Received') return 'background: #dbeafe; color: #1e40af;'; // Biru
-        if (status === 'Evaluated') return 'background: #fef08a; color: #854d0e;'; // Kuning
-        if (status === 'Approved') return 'background: #dcfce7; color: #166534;'; // Hijau
-        return 'background: #f1f5f9; color: #475569;'; // Default abu
+        if (status === 'Received') return 'background: #dbeafe; color: #1e40af;';
+        if (status === 'Evaluated') return 'background: #fef08a; color: #854d0e;';
+        if (status === 'Approved') return 'background: #dcfce7; color: #166534;';
+        return 'background: #f1f5f9; color: #475569;';
     }
 
-    // FUNGSI RENDER TABLE
+    // 3. FUNGSI RENDER TABEL RINGKAS
     function renderTable() {
         const tbody = document.getElementById('tbody-pn');
         tbody.innerHTML = ''; 
@@ -101,57 +86,91 @@ export function render(container) {
         pnData.forEach((row, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td style="border-right: 2px solid var(--border-color); text-align:center;">
-                    <button class="btn-delete" data-index="${index}" style="background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;" title="Delete Data">
-                        <i class="ph ph-trash"></i>
-                    </button>
-                </td>
+                <td style="font-weight: 600;">${row.ticket}</td>
                 
-                <td style="border-right: 1px solid var(--border-color); font-weight: 600;">${row.ticket}</td>
-                
-                <!-- STATUS YANG BISA DI KLIK -->
-                <td style="border-right: 1px solid var(--border-color); text-align: center; cursor: pointer;" class="btn-status" data-index="${index}" title="Click to Change Status">
+                <td style="cursor: pointer;" class="btn-status" data-index="${index}" title="Change Status">
                     <span class="status-badge" style="${getStatusStyle(row.status)}">${row.status} <i class="ph ph-pencil-simple" style="font-size:0.7rem;"></i></span>
                 </td>
 
-                <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-gray">${row.request}</span></td>
-                <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-gray">${row.dangerous}</span></td>
-                <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-gray">${row.shelf}</span></td>
-                <td style="border-right: 1px solid var(--border-color);">${row.requester}</td>
-                <td style="border-right: 2px solid var(--border-color); text-align: center;">${index + 1}</td>
-                
-                <td><strong>${row.type}</strong></td>
-                <td>${row.desc}</td>
-                <td>${row.uom}</td>
+                <td><span class="status-badge badge-gray">${row.request}</span></td>
+                <td>${row.requester}</td>
                 <td><strong>${row.pn}</strong></td>
-                <td>${row.mfr}</td>
-                <td>${row.doc}</td>
-                <td>${row.unserv_plant}</td>
-                <td>${row.unserv_loc}</td>
-                <td>${row.ref_plant}</td>
-                <td>${row.ref_iss}</td>
-                <td>${row.ref_rec}</td>
-                <td>${row.parent_shop}</td>
-                <td>${row.parent_plant}</td>
-                <td>${row.serv_loc}</td>
-                <td>${row.ac_type}</td>
-                <td>${row.pur_grp}</td>
-                <td>${row.reg}</td>
+                
+                <!-- ACTION DROP DOWN -->
+                <td style="text-align:center;">
+                    <div class="action-dropdown">
+                        <button class="action-btn drop-trigger" data-index="${index}">
+                            <i class="ph ph-dots-three-outline-vertical"></i>
+                        </button>
+                        <div class="dropdown-content" id="dropdown-${index}">
+                            <div class="dropdown-item btn-detail" data-index="${index}"><i class="ph ph-eye"></i> Detail Info</div>
+                            <div class="dropdown-item text-red btn-delete" data-index="${index}"><i class="ph ph-trash"></i> Delete Data</div>
+                        </div>
+                    </div>
+                </td>
             `;
             tbody.appendChild(tr);
         });
     }
     renderTable();
 
-    // EVENT DELEGATION (Klik Hapus dan Klik Ubah Status)
+    // 4. EVENT LISTENER (Dropdown, Detail, Delete, Status)
+    
+    // Global Klik (Tutup Dropdown jika klik di luar)
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
+    });
+
     document.getElementById('tbody-pn').addEventListener('click', (e) => {
-        // --- 1. HANDLE HAPUS ---
+        // Toggle Action Dropdown
+        const trigger = e.target.closest('.drop-trigger');
+        if (trigger) {
+            e.stopPropagation(); // Mencegah global click menutup dropdown yang baru dibuka
+            document.querySelectorAll('.dropdown-content').forEach(el => el.classList.remove('show'));
+            const index = trigger.getAttribute('data-index');
+            document.getElementById(`dropdown-${index}`).classList.toggle('show');
+            return;
+        }
+
+        // Action: DETAIL INFO
+        const btnDetail = e.target.closest('.btn-detail');
+        if (btnDetail) {
+            const index = btnDetail.getAttribute('data-index');
+            const data = pnData[index];
+            Swal.fire({
+                title: 'Material Detail',
+                html: `
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; text-align:left; font-size: 0.85rem; background: var(--bg-main); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color); color: var(--text-main);">
+                        <div><strong style="color:var(--text-muted);">Ticket No:</strong> <br>${data.ticket}</div>
+                        <div><strong style="color:var(--text-muted);">Status:</strong> <br>${data.status}</div>
+                        <div><strong style="color:var(--text-muted);">Request Type:</strong> <br>${data.request}</div>
+                        <div><strong style="color:var(--text-muted);">Dept:</strong> <br>${data.dept}</div>
+                        <div><strong style="color:var(--text-muted);">Material Type:</strong> <br>${data.type}</div>
+                        <div><strong style="color:var(--text-muted);">Dangerous:</strong> <br>${data.dangerous}</div>
+                        <div style="grid-column: span 2;"><strong style="color:var(--text-muted);">Description:</strong> <br>${data.desc}</div>
+                        <div><strong style="color:var(--text-muted);">PN / MANU_MAT:</strong> <br><b>${data.pn}</b></div>
+                        <div><strong style="color:var(--text-muted);">UoM:</strong> <br>${data.uom}</div>
+                        <div><strong style="color:var(--text-muted);">Unserviceable Plant:</strong> <br>${data.unserv_plant}</div>
+                        <div><strong style="color:var(--text-muted);">Refurbishment Plant:</strong> <br>${data.ref_plant}</div>
+                        <div><strong style="color:var(--text-muted);">Parent Shop:</strong> <br>${data.parent_shop}</div>
+                        <div><strong style="color:var(--text-muted);">A/C Type:</strong> <br>${data.ac_type}</div>
+                    </div>
+                `,
+                width: '600px',
+                background: 'var(--bg-card)',
+                confirmButtonColor: 'var(--primary)',
+                confirmButtonText: 'Close'
+            });
+            return;
+        }
+
+        // Action: DELETE
         const btnDelete = e.target.closest('.btn-delete');
         if (btnDelete) {
             const index = btnDelete.getAttribute('data-index');
             Swal.fire({
-                title: 'Hapus Data?',
-                text: `Hapus material ${pnData[index].desc}?`,
+                title: 'Delete Data?',
+                text: `Hapus PN ${pnData[index].pn}?`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
@@ -162,22 +181,17 @@ export function render(container) {
                     renderTable();
                 }
             });
-            return; // Selesai
+            return;
         }
 
-        // --- 2. HANDLE UBAH STATUS TIKET (KHUSUS ADMIN) ---
+        // Action: UBAH STATUS (Admin)
         const btnStatus = e.target.closest('.btn-status');
         if (btnStatus) {
             const index = btnStatus.getAttribute('data-index');
             Swal.fire({
                 title: 'Update Ticket Status',
-                text: `Nomor Tiket: ${pnData[index].ticket}`,
                 input: 'select',
-                inputOptions: {
-                    'Received': 'Received',
-                    'Evaluated': 'Evaluated',
-                    'Approved': 'Approved'
-                },
+                inputOptions: { 'Received': 'Received', 'Evaluated': 'Evaluated', 'Approved': 'Approved' },
                 inputValue: pnData[index].status,
                 showCancelButton: true,
                 confirmButtonText: 'Update Status',
@@ -185,31 +199,33 @@ export function render(container) {
                 background: 'var(--bg-card)', color: 'var(--text-main)'
             }).then((res) => {
                 if (res.isConfirmed) {
-                    pnData[index].status = res.value; // Timpa status lama
-                    renderTable(); // Render ulang warna
+                    pnData[index].status = res.value; 
+                    renderTable(); 
                     Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Status Updated', showConfirmButton: false, timer: 1500 });
                 }
             });
         }
     });
 
-    // LOGIKA INPUT MODAL DENGAN MEMORI TIKET
+    // 5. LOGIKA MODAL (GENERATE NOMOR TIKET OTOMATIS)
     document.getElementById('btn-add-pn').addEventListener('click', () => {
+        // Generate 6 digit random number
+        const randomTicket = Math.floor(100000 + Math.random() * 900000).toString();
+
         const formConfig = {
             title: '<i class="ph ph-hard-drives"></i> Tambah Data Existing PN',
+            // Informasi Fix yang masuk ke atas Modal
+            headerData: {
+                ticketNo: randomTicket,
+                requester: 'Muhammad Rizki F',
+                department: 'TCP-10'
+            },
             sections: [
                 {
-                    title: '1. General Information',
+                    title: '1. General Info & Codes',
                     fields: [
-                        // preserveOnLoop: true -> Value ini tidak direset saat Add Another dicentang!
-                        { id: 'ticket_no', label: 'Ticket Number', type: 'text', placeholder: 'TKT-YYYYMM-XXX', uppercase: true, required: true, preserveOnLoop: true },
                         { id: 'dangerous_good', label: 'Dangerous Good', type: 'select', options: ['NO', 'YES'], required: true },
                         { id: 'shelf_life', label: 'Shelf Life', type: 'select', options: ['NO', 'YES'], required: true },
-                    ]
-                },
-                {
-                    title: '2. Material Codes & Desc',
-                    fields: [
                         { id: 'matl_type', label: 'Matl Type', type: 'select', options: ['TOOLS', 'CONSUMABLE', 'SPAREPART'], required: true },
                         { id: 'matl_desc', label: 'Material Desc', type: 'text', uppercase: true, required: true },
                         { id: 'base_oum', label: 'Base Unit (UoM)', type: 'text', uppercase: true, required: true },
@@ -219,7 +235,7 @@ export function render(container) {
                     ]
                 },
                 {
-                    title: '3. Plant & Locations',
+                    title: '2. Plant & Locations',
                     fields: [
                         { id: 'zzuwerks', label: 'Unserviceable Plant', type: 'text', uppercase: true },
                         { id: 'zzulgort', label: 'Unserviceable St. Loc', type: 'text', uppercase: true },
@@ -229,7 +245,7 @@ export function render(container) {
                     ]
                 },
                 {
-                    title: '4. Additional Details',
+                    title: '3. Additional Details',
                     fields: [
                         { id: 'zzrarbpl', label: 'Parent Shop', type: 'text', uppercase: true },
                         { id: 'zzpwerks', label: 'Parent Shop Plant', type: 'text', uppercase: true },
@@ -240,11 +256,15 @@ export function render(container) {
                     ]
                 }
             ],
-            onSubmit: (formData) => {
+            onSubmit: (formData, header) => {
+                // Saat submit, kita ambil Header Data & Form Input
                 const newEntry = {
-                    ticket: formData.ticket_no,      // TIKET BARU / TIKET YANG DI-LOOP
-                    status: "Received",              // Status default waktu disubmit
-                    request: "EXISTING PN", requester: "Muhammad Rizki F", no: (pnData.length + 1).toString(),
+                    ticket: header.ticketNo,
+                    status: "Received", 
+                    request: "EXISTING PN", 
+                    requester: header.requester, 
+                    dept: header.department,
+                    
                     dangerous: formData.dangerous_good, shelf: formData.shelf_life,
                     type: formData.matl_type, desc: formData.matl_desc, uom: formData.base_oum,
                     pn: formData.manu_mat, mfr: formData.mfr_no, doc: formData.document,

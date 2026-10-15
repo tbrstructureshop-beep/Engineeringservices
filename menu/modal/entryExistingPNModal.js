@@ -301,7 +301,59 @@ export function openEntryModal(config) {
 
                 e.preventDefault();
                 const pasteData = (e.clipboardData || window.clipboardData).getData('text');
-                const rowsData = pasteData.split(/\r?\n/).filter(row => row !== ''); // Hapus baris benar-benar kosong
+
+                // FUNGSI KHUSUS MEMBACA DATA EXCEL (Mencegah Enter di dalam cell membuat baris baru)
+                function parseExcelPaste(text) {
+                    let rows = [];
+                    let currentRow = [];
+                    let currentCell = '';
+                    let insideQuotes = false;
+
+                    for (let i = 0; i < text.length; i++) {
+                        let char = text[i];
+                        let nextChar = text[i + 1];
+
+                        if (char === '"') {
+                            if (insideQuotes && nextChar === '"') {
+                                // Jika ada tanda kutip ganda di dalam string (""), jadikan satu kutip
+                                currentCell += '"';
+                                i++; // lewati karakter kutip berikutnya
+                            } else {
+                                // Toggle status di dalam/luar kutip
+                                insideQuotes = !insideQuotes;
+                            }
+                        } else if (char === '\t' && !insideQuotes) {
+                            // Pindah Kolom
+                            currentRow.push(currentCell);
+                            currentCell = '';
+                        } else if ((char === '\n' || char === '\r') && !insideQuotes) {
+                            // Pindah Baris (Hanya jika TIDAK sedang di dalam tanda kutip)
+                            if (char === '\r' && nextChar === '\n') i++; // Handle format \r\n
+                            currentRow.push(currentCell);
+                            
+                            // Abaikan jika baris benar-benar kosong
+                            if (currentRow.some(cell => cell.trim() !== '')) {
+                                rows.push(currentRow);
+                            }
+                            currentRow = [];
+                            currentCell = '';
+                        } else {
+                            // Tambahkan huruf ke cell
+                            currentCell += char;
+                        }
+                    }
+                    
+                    // Masukkan data terakhir jika masih ada
+                    if (currentCell !== '' || currentRow.length > 0) {
+                        currentRow.push(currentCell);
+                        if (currentRow.some(cell => cell.trim() !== '')) rows.push(currentRow);
+                    }
+
+                    return rows;
+                }
+
+                // Dapatkan struktur baris & kolom yang benar
+                const parsedRows = parseExcelPaste(pasteData);
 
                 const startCell = targetInput.closest('td');
                 const startRow = startCell.closest('tr');
@@ -309,10 +361,9 @@ export function openEntryModal(config) {
                 
                 let currentRow = startRow;
 
-                rowsData.forEach((rowData) => {
-                    if (!currentRow) currentRow = addRow();
+                parsedRows.forEach((colsData) => {
+                    if (!currentRow) currentRow = addRow(); // Tambah baris otomatis jika kurang
                     
-                    const colsData = rowData.split('\t');
                     let currentColIndex = startColIndex;
 
                     colsData.forEach((colText) => {
@@ -320,7 +371,11 @@ export function openEntryModal(config) {
                         if (cell) {
                             const input = cell.querySelector('.excel-input');
                             if (input) {
-                                input.value = colText.trim().toUpperCase();
+                                // CATATAN: Karena element web adalah <input type="text"> (1 baris), 
+                                // maka karakter "Enter" di dalam cell diganti dengan Spasi (' ') 
+                                // agar text tidak hilang dan tetap rapi saat dibaca di web.
+                                let cleanText = colText.replace(/\r?\n/g, ' ').trim().toUpperCase();
+                                input.value = cleanText;
                             }
                         }
                         currentColIndex++;
@@ -328,7 +383,7 @@ export function openEntryModal(config) {
                     currentRow = currentRow.nextElementSibling;
                 });
                 
-                // Hapus blok seleksi setelah paste
+                // Hapus blok seleksi (warna biru) setelah paste
                 clearSelection();
             });
         },

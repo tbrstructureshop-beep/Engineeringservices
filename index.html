@@ -4,6 +4,23 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GMF Engineering Services</title>
+
+    <script>
+        function guardAuth() {
+            if (!localStorage.getItem('currentUser')) {
+                // Gunakan replace agar history halaman ini terhapus
+                window.location.replace('menu/loginPage.html');
+            }
+        }
+
+        // 1. Cek langsung saat pertama kali dieksekusi
+        guardAuth();
+
+        // 2. Cek saat user menekan tombol Back (menangani Browser BFCache)
+        window.addEventListener('pageshow', function (event) {
+            guardAuth();
+        });
+    </script>
     
     <!-- Modern Font: Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">

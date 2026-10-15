@@ -62,11 +62,11 @@ export function render(container) {
         </div>
     `;
 
-    // 1. DATA SEEDING DENGAN 3 STATUS SPESIFIK
+    // 1. DATA SEEDING
     let ticketData = [
         {
             ticketNo: "492018", 
-            status: "Received", 
+            status: "Received", // Bisa Diedit
             request: "EXISTING PN", 
             requester: "Muhammad Rizki F", 
             dept: "TCP-10",
@@ -77,7 +77,7 @@ export function render(container) {
         },
         {
             ticketNo: "492019", 
-            status: "Created", 
+            status: "Created", // Terkunci (Read-Only)
             request: "EXISTING PN", 
             requester: "Budi Santoso", 
             dept: "TCP-12",
@@ -87,7 +87,7 @@ export function render(container) {
         }
     ];
 
-    // 2. STYLING STATUS: Received, Under Evaluation, Created
+    // 2. STYLING STATUS
     function getStatusStyle(status) {
         if (status === 'Received') return 'background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;';
         if (status === 'Under Evaluation') return 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;';
@@ -141,13 +141,13 @@ export function render(container) {
             globalDropdown.style.top = `${rect.bottom + 5}px`;
             globalDropdown.style.left = `${rect.left}px`;
 
-            // Dinamis mengubah label dropdown sesuai status
+            // TAMPILAN LABEL MENU: 'Created' = View Detail (Read-Only), lainnya = Edit Ticket
             const currentStatus = ticketData[activeDropdownIndex].status;
             const detailLabel = document.getElementById('dd-detail');
             if (currentStatus === 'Created') {
-                detailLabel.innerHTML = `<i class="ph ph-pencil-simple"></i> Edit Ticket PNs`;
-            } else {
                 detailLabel.innerHTML = `<i class="ph ph-eye"></i> View Detail (Read-Only)`;
+            } else {
+                detailLabel.innerHTML = `<i class="ph ph-pencil-simple"></i> Edit Ticket PNs`;
             }
 
             globalDropdown.classList.add('show');
@@ -181,22 +181,26 @@ export function render(container) {
         }
     });
 
-    // 5. VIEW DETAIL / EDIT DENGAN MEMBUKA MODAL YANG SAMA
+    // 5. DETAIL VIEW / EDIT MODAL
     document.getElementById('dd-detail').addEventListener('click', () => {
         const ticket = ticketData[activeDropdownIndex];
-        const isCreated = (ticket.status === 'Created');
+        
+        // HANYA 'Created' YANG READ-ONLY; 'Received' & 'Under Evaluation' BISA DIEDIT
+        const isReadOnly = (ticket.status === 'Created');
 
         openEntryModal({
-            title: isCreated ? `<i class="ph ph-note-pencil"></i> Edit Ticket: ${ticket.ticketNo}` : `<i class="ph ph-file-text"></i> Ticket Details: ${ticket.ticketNo}`,
+            title: !isReadOnly 
+                ? `<i class="ph ph-note-pencil"></i> Edit Ticket (${ticket.status}): ${ticket.ticketNo}` 
+                : `<i class="ph ph-file-text"></i> Ticket Details (Created): ${ticket.ticketNo}`,
             headerData: { 
                 ticketNo: ticket.ticketNo, 
                 requester: ticket.requester, 
                 department: ticket.dept 
             },
-            initialData: ticket.pns, // Masukkan data PN tiket saat ini
-            isReadOnly: !isCreated,  // Jika status BUKAN 'Created', maka terkunci (Read Only)
+            initialData: ticket.pns,
+            isReadOnly: isReadOnly,
             
-            // Ketika user menyimpan perubahan pada status 'Created'
+            // Simpan perubahan ke ticketData jika dalam mode edit
             onSubmit: (updatedPns) => {
                 ticket.pns = updatedPns;
                 renderTable();
@@ -219,19 +223,19 @@ export function render(container) {
         });
     });
 
-    // 7. INPUT NEW DATA (CREATE)
+    // 7. INPUT TIKET BARU
     document.getElementById('btn-add-pn').addEventListener('click', () => {
         const randomTicket = Math.floor(100000 + Math.random() * 900000).toString();
 
         openEntryModal({
             title: '<i class="ph ph-hard-drives"></i> Create New PN Ticket',
             headerData: { ticketNo: randomTicket, requester: 'Muhammad Rizki F', department: 'TCP-10' },
-            initialData: [], // Kosong untuk input baru
-            isReadOnly: false, // Bebas edit
+            initialData: [],
+            isReadOnly: false,
             onSubmit: (arrayOfPns, header) => {
                 const newTicket = {
                     ticketNo: header.ticketNo,
-                    status: "Received", // Default status awal
+                    status: "Received", // Awal tiket masuk sebagai Received (Editable)
                     request: "EXISTING PN",
                     requester: header.requester,
                     dept: header.department,

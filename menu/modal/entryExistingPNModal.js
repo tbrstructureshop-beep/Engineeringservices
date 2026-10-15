@@ -31,10 +31,6 @@ export function openEntryModal(config) {
                 box-shadow: inset 0 0 0 2px var(--primary); 
             }
                         
-            /* Dark mode support untuk sel yang aktif */
-            @media (prefers-color-scheme: dark) {
-                .excel-input:focus { background: #1e3a8a; }
-            }
         </style>
 
         <div style="display: flex; justify-content: space-between; background: var(--bg-main); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 10px; font-size: 0.85rem; text-align: left;">

@@ -229,7 +229,29 @@
     <script type="module">
         import { openUserModal } from './menu/modal/logOut.js';
 
+        // ==========================================
+        // 1. AUTH GUARD: CEK STATUS LOGIN
+        // ==========================================
+        const rawUser = localStorage.getItem('currentUser');
+        if (!rawUser) {
+            // Jika belum login, redirect ke menu/loginPage.html
+            window.location.href = 'menu/loginPage.html';
+        }
+
+        const currentUser = rawUser ? JSON.parse(rawUser) : null;
+
         document.addEventListener('DOMContentLoaded', () => {
+            // Update Tampilan Profil di Header secara Dinamis
+            if (currentUser) {
+                const avatarEl = document.querySelector('.avatar');
+                const userNameEl = document.querySelector('.user-name');
+                const userRoleEl = document.querySelector('.user-role');
+
+                if (avatarEl) avatarEl.textContent = currentUser.initials || 'US';
+                if (userNameEl) userNameEl.textContent = currentUser.name || 'User';
+                if (userRoleEl) userRoleEl.textContent = currentUser.role || 'Requester';
+            }
+
             const appContainer = document.getElementById('app-container');
             const pageTitle = document.getElementById('page-title');
             const navItems = document.querySelectorAll('.nav-item');
@@ -240,17 +262,13 @@
             const userProfileBtn = document.getElementById('user-profile-btn');
 
             // --- USER PROFILE & LOGOUT MODAL ---
-            userProfileBtn.addEventListener('click', () => {
-                openUserModal({
-                    name: "Muhammad Rizki F",
-                    initials: "MR",
-                    empId: "584920",
-                    unit: "TCP-10 (Engineering Support)",
-                    role: "Requester"
+            if (userProfileBtn && currentUser) {
+                userProfileBtn.addEventListener('click', () => {
+                    openUserModal(currentUser);
                 });
-            });
+            }
 
-            // --- 1. LOGIKA TOGGLE SIDEBAR (DRAWER) ---
+            // --- 2. LOGIKA TOGGLE SIDEBAR (DRAWER) ---
             menuToggle.addEventListener('click', () => {
                 if (window.innerWidth <= 768) {
                     sidebar.classList.toggle('open');
@@ -259,7 +277,7 @@
                 }
             });
 
-            // --- 2. LOGIKA DARK MODE ---
+            // --- 3. LOGIKA DARK MODE ---
             let isDarkMode = localStorage.getItem('darkMode') === 'true';
 
             function applyTheme(dark) {
@@ -287,7 +305,7 @@
                 applyTheme(isDarkMode);
             });
 
-            // --- 3. LOGIKA DYNAMIC IMPORT MENU ---
+            // --- 4. LOGIKA DYNAMIC IMPORT MENU ---
             async function loadMenu(menuName, title) {
                 appContainer.innerHTML = `<div style="text-align:center; padding: 50px; color:var(--text-muted);"><i class="ph ph-spinner ph-spin" style="font-size: 2rem;"></i><p>Loading module...</p></div>`;
                 pageTitle.textContent = title;

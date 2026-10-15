@@ -1,4 +1,5 @@
 // File: menu/modal/logOut.js
+import { openUserManagementModal } from './userManagement.js';
 
 export function openUserModal(userData = {}) {
     const user = {
@@ -9,6 +10,9 @@ export function openUserModal(userData = {}) {
         role: userData.role || "Requester",
         ...userData
     };
+
+    // CEK APAKAH USER ADALAH ADMIN
+    const isAdmin = user.role.toLowerCase().includes('admin');
 
     const htmlContent = `
         <style>
@@ -37,6 +41,20 @@ export function openUserModal(userData = {}) {
             .info-row:last-child { border-bottom: none; }
             .info-label { color: var(--text-muted); display: flex; align-items: center; gap: 8px; font-weight: 500; }
             .info-value { color: var(--text-main); font-weight: 600; text-align: right; }
+
+            /* Tombol Admin User Management */
+            .btn-admin-mgmt {
+                width: 100%; margin-top: 15px; padding: 11px 16px;
+                background: linear-gradient(135deg, #0f172a, #1e293b);
+                color: #ffffff; border: 1px solid rgba(255,255,255,0.15);
+                border-radius: 8px; font-size: 0.85rem; font-weight: 600;
+                cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+                transition: all 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            }
+            .btn-admin-mgmt:hover {
+                background: var(--primary); border-color: var(--primary);
+                transform: translateY(-1px);
+            }
         </style>
 
         <div class="user-detail-card">
@@ -58,6 +76,13 @@ export function openUserModal(userData = {}) {
                     <span class="info-value">${user.unit}</span>
                 </div>
             </div>
+
+            <!-- TOMBOL HANYA MUNCUL JIKA USER ADALAH ADMIN -->
+            ${isAdmin ? `
+                <button type="button" class="btn-admin-mgmt" id="btn-trigger-user-mgmt">
+                    <i class="ph ph-users-three" style="font-size:1.15rem; color:#60a5fa;"></i> User Management (Admin)
+                </button>
+            ` : ''}
         </div>
     `;
 
@@ -74,7 +99,20 @@ export function openUserModal(userData = {}) {
         cancelButtonText: '<i class="ph ph-x"></i> Close',
         cancelButtonColor: '#64748b',
         reverseButtons: true,
-        focusConfirm: false
+        focusConfirm: false,
+        didOpen: () => {
+            // Pasang event listener jika tombol User Management ada (khusus admin)
+            const btnMgmt = document.getElementById('btn-trigger-user-mgmt');
+            if (btnMgmt) {
+                btnMgmt.addEventListener('click', () => {
+                    // Tutup modal profil dan buka modal User Management
+                    Swal.close();
+                    setTimeout(() => {
+                        openUserManagementModal();
+                    }, 200);
+                });
+            }
+        }
     }).then((result) => {
         if (result.isConfirmed) {
             Swal.fire({
@@ -90,9 +128,7 @@ export function openUserModal(userData = {}) {
                 color: 'var(--text-main)'
             }).then((logoutRes) => {
                 if (logoutRes.isConfirmed) {
-                    // Hapus session user yang aktif
                     localStorage.removeItem('currentUser');
-
                     Swal.fire({
                         icon: 'success',
                         title: 'Logged Out',
@@ -102,7 +138,6 @@ export function openUserModal(userData = {}) {
                         background: 'var(--bg-card)',
                         color: 'var(--text-main)'
                     }).then(() => {
-                        // GANTI href MENJADI replace
                         window.location.replace('menu/loginPage.html');
                     });
                 }

@@ -4,12 +4,16 @@ export function openEntryModal(config) {
     let htmlForm = `
         <style>
             /* STYLING UNTUK EXCEL-LIKE TABLE */
-            .excel-table { width: 100%; border-collapse: collapse; min-width: 3800px; font-size: 0.8rem; background: var(--bg-card); user-select: none; }
+            .excel-table { width: 100%; border-collapse: collapse; min-width: 4200px; font-size: 0.8rem; background: var(--bg-card); user-select: none; }
             
             .excel-table th { 
-                background: var(--bg-main); color: var(--text-muted); padding: 12px 10px; 
+                background: var(--bg-main); color: var(--text-muted); padding: 10px 12px; 
                 text-align: center; border: 1px solid var(--border-color); white-space: nowrap;
-                vertical-align: middle; line-height: 1.4;
+                vertical-align: middle; line-height: 1.3;
+            }
+
+            .th-sub {
+                display: block; font-size: 0.72rem; font-weight: normal; opacity: 0.85; margin-top: 3px; color: var(--primary);
             }
             
             .excel-table td { 
@@ -22,23 +26,34 @@ export function openEntryModal(config) {
                 outline: none; text-transform: uppercase; font-family: inherit;
             }
             
-            /* Efek highlight biru saat cell sedang diketik */
             .excel-input:focus { 
                 background: var(--bg-card); 
                 box-shadow: inset 0 0 0 2px var(--primary); 
             }
 
-            /* EFEK KETIKA BANYAK CELL DI-BLOCK (MULTI-SELECT) */
             .excel-table td.selected-cell {
                 background-color: rgba(59, 130, 246, 0.2) !important;
             }
             .excel-table td.selected-cell input {
                 background-color: transparent !important;
-                color: transparent; /* Sembunyikan warna teks default agar block terlihat jelas */
-                text-shadow: 0 0 0 var(--text-main); /* Tetap tampilkan teks menggunakan shadow */
+                color: transparent;
+                text-shadow: 0 0 0 var(--text-main);
+            }
+
+            /* Tombol Upload Dokumen */
+            .btn-doc-upload {
+                position: absolute; right: 5px; background: none; border: none; 
+                color: var(--primary); font-size: 1.15rem; cursor: pointer; 
+                display: flex; align-items: center; justify-content: center;
+                padding: 4px; border-radius: 4px; transition: background 0.2s, color 0.2s;
+            }
+            .btn-doc-upload:hover {
+                background: var(--bg-main);
+                color: #2563eb;
             }
         </style>
 
+        <!-- Header Info Tiket -->
         <div style="display: flex; justify-content: space-between; background: var(--bg-main); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 10px; font-size: 0.85rem; text-align: left;">
             <div>
                 <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Ticket No</div>
@@ -54,36 +69,37 @@ export function openEntryModal(config) {
             </div>
         </div>
 
+        <!-- Tabel Multi-PN (Excel Style) -->
         <div style="margin-top: 15px; overflow-x: auto; max-height: 55vh; border: 1px solid var(--border-color); border-radius: 4px;">
             <table class="excel-table">
                 <thead style="position: sticky; top: 0; z-index: 10;">
                     <tr>
-                        <th style="position: sticky; left: 0; z-index: 11; width: 40px;">ACT</th>
-                        <th>REQUEST</th>
-                        <th>DANGEROUS GOOD</th>
-                        <th>SHELF LIFE</th>
+                        <th style="position: sticky; left: 0; z-index: 11; width: 45px;">ACT</th>
+                        <th>Request</th>
+                        <th>Dangerous Good</th>
+                        <th>Shelf Life</th>
                         <th>NO</th>
-                        <th>MATERIAL TYPE</th>
-                        <th>MATERIAL DESCRIPTION (SHORT TEXT)</th>
-                        <th>BASE UNIT OF MEASURE</th>
-                        <th>MANUFACTURER PART NUMBER</th>
-                        <th>NUMBER OF A MANUFACTURER</th>
-                        <th>DOCUMENT NUMBER</th>
-                        <th>UNSERVICEABLE PLANT</th>
-                        <th>UNSERSABLE STORAGE LOCATION</th>
-                        <th>REFURBISHMENT PLANT</th>
-                        <th>REFURBISHMENT ISSUE STORAGE LOC</th>
-                        <th>REFURBISHMENT RECEIPT STORAGE LOC</th>
-                        <th>PARENT SHOP</th>
-                        <th>PARENT SHOP PLANT</th>
-                        <th>SERVICEABLE STORE LOCATION</th>
-                        <th>TYPE OF TECHNICAL OBJECT</th>
-                        <th>PURCHASING GROUP</th>
-                        <th>AIRCRAFT REGISTRATION</th>
+                        <th>MATERIAL TYPE<span class="th-sub">(MATL_TYPE)</span></th>
+                        <th>MATERIAL DESCRIPTION (SHORT TEXT)<span class="th-sub">(MATL_DESC)</span></th>
+                        <th>BASE UNIT OF MEASURE<span class="th-sub">(BASE_OUM)</span></th>
+                        <th>MANUFACTURER PART NUMBER<span class="th-sub">(MANU_MAT (PN))</span></th>
+                        <th>NUMBER OF A MANUFACTURER<span class="th-sub">(MFR NO (CAGE CODE))</span></th>
+                        <th>DOCUMENT NUMBER(WITHOUT DOCUMENT MANAGEMENT SYSTEM)<span class="th-sub">(DOCUMENT)</span></th>
+                        <th>UNSERVICEABLE PLANT<span class="th-sub">(ZZUWERKS)</span></th>
+                        <th>UNSERSABLE STORAGE LOCATION<span class="th-sub">(ZZULGORT)</span></th>
+                        <th>REFURBISHMENT PLANT<span class="th-sub">(ZZRWERKS)</span></th>
+                        <th>REFURBISHMENT ISSUE STORAGE LOCATION<span class="th-sub">(ZZRILGORT)</span></th>
+                        <th>REFURBISHMENT RECEIPT STORAGE LOCATION<span class="th-sub">(ZZRRLGORT)</span></th>
+                        <th>PARENT SHOP<span class="th-sub">(ZZRARBPL)</span></th>
+                        <th>PARENT SHOP PLANT<span class="th-sub">(ZZPWERKS)</span></th>
+                        <th>SERVICEABLE STORE LOCATION<span class="th-sub">(ZZSLGORT)</span></th>
+                        <th>TYPE OF TECHNICAL OBJECT (A/C TYPE)<span class="th-sub">(ZZEQART)</span></th>
+                        <th>PURCHASING GROUP<span class="th-sub">(EKGRP)</span></th>
+                        <th>AIRCRAFT REGISTRATION<span class="th-sub">(Reg)</span></th>
                     </tr>
                 </thead>
                 <tbody id="modal-tbody">
-                    <!-- Baris akan digenerate via JS -->
+                    <!-- Baris di-generate via JS -->
                 </tbody>
             </table>
         </div>
@@ -93,9 +109,12 @@ export function openEntryModal(config) {
                 <i class="ph ph-plus-circle"></i> Add Row
             </button>
             <span style="font-size: 0.8rem; color: var(--text-muted); background: var(--bg-main); padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border-color);">
-                <i class="ph ph-info"></i> Drag to select cells. Support Bulk: Delete, Copy (Ctrl+C), Cut (Ctrl+X), Paste (Ctrl+V).
+                <i class="ph ph-info"></i> Support drag bulk-select, Delete, Cut (Ctrl+X), Copy (Ctrl+C), Smart Paste (Ctrl+V), dan direct file upload di kolom Document.
             </span>
         </div>
+
+        <!-- Hidden input untuk trigger file selector -->
+        <input type="file" id="cell-file-picker" style="display: none;" accept="*/*" />
     `;
 
     Swal.fire({
@@ -110,8 +129,37 @@ export function openEntryModal(config) {
         focusConfirm: false,
         didOpen: () => {
             const tbody = document.getElementById('modal-tbody');
-            
-            // FUNGSI ADD ROW: Karena dirender ulang sebagai string, PASTI kosong, tidak duplikasi baris atasnya
+            const filePicker = document.getElementById('cell-file-picker');
+            let activeFileInputTarget = null; // Menyimpan input text cell mana yang sedang diisi via upload
+
+            // FUNGSI NOTIFIKASI TOAST SWEET & RINGAN (Tanpa menutup modal utama)
+            function showSweetToast(filename, rowNum) {
+                let toast = document.getElementById('cell-upload-toast');
+                if (!toast) {
+                    toast = document.createElement('div');
+                    toast.id = 'cell-upload-toast';
+                    toast.style.cssText = `
+                        position: fixed; top: 25px; right: 25px; z-index: 99999;
+                        background: #10b981; color: white; padding: 12px 20px;
+                        border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.3);
+                        font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 10px;
+                        opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease;
+                        transform: translateY(-15px); pointer-events: none;
+                    `;
+                    document.body.appendChild(toast);
+                }
+                toast.innerHTML = `<i class="ph ph-check-circle" style="font-size: 1.3rem;"></i> <span>File <strong>"${filename}"</strong> successfully attached to Row ${rowNum}!</span>`;
+                toast.style.opacity = '1';
+                toast.style.transform = 'translateY(0)';
+                
+                clearTimeout(toast._timer);
+                toast._timer = setTimeout(() => {
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(-15px)';
+                }, 3000);
+            }
+
+            // FUNGSI ADD ROW: Dijamin kosong & tidak menduplikasi row atasnya
             function addRow() {
                 const tr = document.createElement('tr');
                 tr.className = 'pn-row';
@@ -128,7 +176,14 @@ export function openEntryModal(config) {
                     <td><input type="text" class="excel-input input-uom" placeholder="2 EA"></td>
                     <td><input type="text" class="excel-input input-pn" placeholder="CF1633N"></td>
                     <td><input type="text" class="excel-input input-mfr"></td>
-                    <td><input type="text" class="excel-input input-doc"></td>
+                    <td>
+                        <div style="position: relative; display: flex; align-items: center; width: 100%;">
+                            <input type="text" class="excel-input input-doc" placeholder="DOC / UPLOAD" style="padding-right: 32px;">
+                            <button type="button" class="btn-doc-upload" tabindex="-1" title="Upload Attachment File">
+                                <i class="ph ph-upload-simple"></i>
+                            </button>
+                        </div>
+                    </td>
                     <td><input type="text" class="excel-input input-uplant"></td>
                     <td><input type="text" class="excel-input input-uloc"></td>
                     <td><input type="text" class="excel-input input-rplant"></td>
@@ -148,6 +203,7 @@ export function openEntryModal(config) {
             addRow();
             document.getElementById('btn-add-row').addEventListener('click', addRow);
 
+            // EVENT LISTENER HAPUS BARIS
             tbody.addEventListener('click', (e) => {
                 const btn = e.target.closest('.btn-del-row');
                 if (btn) {
@@ -160,8 +216,31 @@ export function openEntryModal(config) {
                 }
             });
 
+            // EVENT LISTENER TRIGGER UPLOAD FILE PADA KOLOM DOCUMENT
+            tbody.addEventListener('click', (e) => {
+                const uploadBtn = e.target.closest('.btn-doc-upload');
+                if (uploadBtn) {
+                    const row = uploadBtn.closest('tr');
+                    activeFileInputTarget = row.querySelector('.input-doc');
+                    filePicker.value = ''; // Reset nilai picker
+                    filePicker.click();
+                }
+            });
+
+            // SAAT FILE DIPILIH DARI KOMPUTER
+            filePicker.addEventListener('change', (e) => {
+                if (e.target.files && e.target.files[0] && activeFileInputTarget) {
+                    const file = e.target.files[0];
+                    activeFileInputTarget.value = file.name.toUpperCase();
+                    activeFileInputTarget._attachedFile = file; // Simpan objek file untuk backend
+
+                    const rowIdx = Array.from(tbody.children).indexOf(activeFileInputTarget.closest('tr')) + 1;
+                    showSweetToast(file.name, rowIdx);
+                }
+            });
+
             // ==========================================
-            // FITUR EXCEL: MULTI-SELECT, BULK DELETE, CUT, COPY
+            // FITUR EXCEL: MULTI-SELECT, DELETE, CUT, COPY
             // ==========================================
             let isSelecting = false;
             let startCell = null;
@@ -170,7 +249,6 @@ export function openEntryModal(config) {
                 tbody.querySelectorAll('.selected-cell').forEach(td => td.classList.remove('selected-cell'));
             }
 
-            // MOUSE DRAG SELECTION
             tbody.addEventListener('mousedown', (e) => {
                 if (e.target.classList.contains('excel-input')) {
                     isSelecting = true;
@@ -184,21 +262,14 @@ export function openEntryModal(config) {
                 if (isSelecting && e.target.classList.contains('excel-input')) {
                     clearSelection();
                     const endCell = e.target.closest('td');
-                    
                     const rows = Array.from(tbody.querySelectorAll('tr'));
                     const startTr = startCell.closest('tr');
                     const endTr = endCell.closest('tr');
-                    
-                    const startRowIdx = rows.indexOf(startTr);
-                    const endRowIdx = rows.indexOf(endTr);
-                    
-                    const startColIdx = Array.from(startTr.children).indexOf(startCell);
-                    const endColIdx = Array.from(endTr.children).indexOf(endCell);
 
-                    const minRow = Math.min(startRowIdx, endRowIdx);
-                    const maxRow = Math.max(startRowIdx, endRowIdx);
-                    const minCol = Math.min(startColIdx, endColIdx);
-                    const maxCol = Math.max(startColIdx, endColIdx);
+                    const minRow = Math.min(rows.indexOf(startTr), rows.indexOf(endTr));
+                    const maxRow = Math.max(rows.indexOf(startTr), rows.indexOf(endTr));
+                    const minCol = Math.min(Array.from(startTr.children).indexOf(startCell), Array.from(endTr.children).indexOf(endCell));
+                    const maxCol = Math.max(Array.from(startTr.children).indexOf(startCell), Array.from(endTr.children).indexOf(endCell));
 
                     for (let r = minRow; r <= maxRow; r++) {
                         for (let c = minCol; c <= maxCol; c++) {
@@ -213,7 +284,6 @@ export function openEntryModal(config) {
 
             document.addEventListener('mouseup', () => { isSelecting = false; });
 
-            // KEYBOARD SHORTCUTS & NAVIGATION
             tbody.addEventListener('keydown', (e) => {
                 const input = e.target;
                 if (!input.classList.contains('excel-input')) return;
@@ -221,30 +291,27 @@ export function openEntryModal(config) {
                 const selectedCells = tbody.querySelectorAll('.selected-cell');
                 const isMultiSelected = selectedCells.length > 1;
 
-                // 1. BULK DELETE
-                if (e.key === 'Delete' || e.key === 'Backspace') {
-                    if (isMultiSelected) {
-                        e.preventDefault(); // Mencegah hapus history browser
-                        selectedCells.forEach(td => {
-                            const inp = td.querySelector('.excel-input');
-                            if (inp) inp.value = '';
-                        });
-                    }
+                // 1. Bulk Delete
+                if ((e.key === 'Delete' || e.key === 'Backspace') && isMultiSelected) {
+                    e.preventDefault();
+                    selectedCells.forEach(td => {
+                        const inp = td.querySelector('.excel-input');
+                        if (inp) inp.value = '';
+                    });
                 }
 
-                // 2. BULK COPY (Ctrl+C)
+                // 2. Bulk Copy (Ctrl+C)
                 if (e.ctrlKey && (e.key === 'c' || e.key === 'C') && isMultiSelected) {
                     e.preventDefault();
                     let copyText = '';
                     let currentRow = null;
-                    
                     selectedCells.forEach(td => {
                         const tr = td.closest('tr');
                         if (currentRow !== tr) {
-                            if (currentRow !== null) copyText += '\n'; // Baris baru
+                            if (currentRow !== null) copyText += '\n';
                             currentRow = tr;
                         } else {
-                            copyText += '\t'; // Kolom baru (Tab)
+                            copyText += '\t';
                         }
                         const inp = td.querySelector('.excel-input');
                         copyText += inp ? inp.value : '';
@@ -252,12 +319,11 @@ export function openEntryModal(config) {
                     navigator.clipboard.writeText(copyText);
                 }
 
-                // 3. BULK CUT (Ctrl+X)
+                // 3. Bulk Cut (Ctrl+X)
                 if (e.ctrlKey && (e.key === 'x' || e.key === 'X') && isMultiSelected) {
                     e.preventDefault();
                     let cutText = '';
                     let currentRow = null;
-                    
                     selectedCells.forEach(td => {
                         const tr = td.closest('tr');
                         if (currentRow !== tr) {
@@ -268,32 +334,28 @@ export function openEntryModal(config) {
                         }
                         const inp = td.querySelector('.excel-input');
                         cutText += inp ? inp.value : '';
-                        if (inp) inp.value = ''; // Kosongkan cell karena di-cut
+                        if (inp) inp.value = '';
                     });
                     navigator.clipboard.writeText(cutText);
                 }
 
-                // 4. ARROW KEY NAVIGATION (Seperti Excel)
+                // 4. Arrow Key Navigation
                 const td = input.closest('td');
                 const tr = td.closest('tr');
                 const colIdx = Array.from(tr.children).indexOf(td);
                 const rowIdx = Array.from(tbody.children).indexOf(tr);
 
-                if (e.key === 'ArrowUp') {
-                    if (tbody.children[rowIdx - 1]) {
-                        e.preventDefault();
-                        tbody.children[rowIdx - 1].children[colIdx].querySelector('.excel-input').focus();
-                    }
-                } else if (e.key === 'ArrowDown') {
-                    if (tbody.children[rowIdx + 1]) {
-                        e.preventDefault();
-                        tbody.children[rowIdx + 1].children[colIdx].querySelector('.excel-input').focus();
-                    }
+                if (e.key === 'ArrowUp' && tbody.children[rowIdx - 1]) {
+                    e.preventDefault();
+                    tbody.children[rowIdx - 1].children[colIdx].querySelector('.excel-input').focus();
+                } else if (e.key === 'ArrowDown' && tbody.children[rowIdx + 1]) {
+                    e.preventDefault();
+                    tbody.children[rowIdx + 1].children[colIdx].querySelector('.excel-input').focus();
                 }
             });
 
             // ==========================================
-            // LOGIKA SMART PASTE (EXCEL KE WEB / BULK PASTE)
+            // LOGIKA SMART PASTE (Mencegah Enter Terpisah)
             // ==========================================
             tbody.addEventListener('paste', (e) => {
                 const targetInput = e.target.closest('.excel-input');
@@ -302,7 +364,6 @@ export function openEntryModal(config) {
                 e.preventDefault();
                 const pasteData = (e.clipboardData || window.clipboardData).getData('text');
 
-                // FUNGSI KHUSUS MEMBACA DATA EXCEL (Mencegah Enter di dalam cell membuat baris baru)
                 function parseExcelPaste(text) {
                     let rows = [];
                     let currentRow = [];
@@ -315,46 +376,34 @@ export function openEntryModal(config) {
 
                         if (char === '"') {
                             if (insideQuotes && nextChar === '"') {
-                                // Jika ada tanda kutip ganda di dalam string (""), jadikan satu kutip
                                 currentCell += '"';
-                                i++; // lewati karakter kutip berikutnya
+                                i++;
                             } else {
-                                // Toggle status di dalam/luar kutip
                                 insideQuotes = !insideQuotes;
                             }
                         } else if (char === '\t' && !insideQuotes) {
-                            // Pindah Kolom
                             currentRow.push(currentCell);
                             currentCell = '';
                         } else if ((char === '\n' || char === '\r') && !insideQuotes) {
-                            // Pindah Baris (Hanya jika TIDAK sedang di dalam tanda kutip)
-                            if (char === '\r' && nextChar === '\n') i++; // Handle format \r\n
+                            if (char === '\r' && nextChar === '\n') i++;
                             currentRow.push(currentCell);
-                            
-                            // Abaikan jika baris benar-benar kosong
                             if (currentRow.some(cell => cell.trim() !== '')) {
                                 rows.push(currentRow);
                             }
                             currentRow = [];
                             currentCell = '';
                         } else {
-                            // Tambahkan huruf ke cell
                             currentCell += char;
                         }
                     }
-                    
-                    // Masukkan data terakhir jika masih ada
                     if (currentCell !== '' || currentRow.length > 0) {
                         currentRow.push(currentCell);
                         if (currentRow.some(cell => cell.trim() !== '')) rows.push(currentRow);
                     }
-
                     return rows;
                 }
 
-                // Dapatkan struktur baris & kolom yang benar
                 const parsedRows = parseExcelPaste(pasteData);
-
                 const startCell = targetInput.closest('td');
                 const startRow = startCell.closest('tr');
                 const startColIndex = Array.from(startRow.children).indexOf(startCell);
@@ -362,8 +411,7 @@ export function openEntryModal(config) {
                 let currentRow = startRow;
 
                 parsedRows.forEach((colsData) => {
-                    if (!currentRow) currentRow = addRow(); // Tambah baris otomatis jika kurang
-                    
+                    if (!currentRow) currentRow = addRow();
                     let currentColIndex = startColIndex;
 
                     colsData.forEach((colText) => {
@@ -371,19 +419,13 @@ export function openEntryModal(config) {
                         if (cell) {
                             const input = cell.querySelector('.excel-input');
                             if (input) {
-                                // CATATAN: Karena element web adalah <input type="text"> (1 baris), 
-                                // maka karakter "Enter" di dalam cell diganti dengan Spasi (' ') 
-                                // agar text tidak hilang dan tetap rapi saat dibaca di web.
-                                let cleanText = colText.replace(/\r?\n/g, ' ').trim().toUpperCase();
-                                input.value = cleanText;
+                                input.value = colText.replace(/\r?\n/g, ' ').trim().toUpperCase();
                             }
                         }
                         currentColIndex++;
                     });
                     currentRow = currentRow.nextElementSibling;
                 });
-                
-                // Hapus blok seleksi (warna biru) setelah paste
                 clearSelection();
             });
         },
@@ -393,7 +435,6 @@ export function openEntryModal(config) {
 
             for (let i = 0; i < rows.length; i++) {
                 const row = rows[i];
-                
                 const pn = row.querySelector('.input-pn').value.trim().toUpperCase();
                 const desc = row.querySelector('.input-desc').value.trim().toUpperCase();
 
@@ -401,6 +442,8 @@ export function openEntryModal(config) {
                     Swal.showValidationMessage(`Baris ${i+1}: MANU_MAT (PN) & MATL_DESC wajib diisi!`);
                     return false;
                 }
+
+                const docInput = row.querySelector('.input-doc');
 
                 dataPns.push({
                     request: row.querySelector('.input-req').value.trim().toUpperCase(),
@@ -412,7 +455,8 @@ export function openEntryModal(config) {
                     uom: row.querySelector('.input-uom').value.trim().toUpperCase(),
                     pn: pn,
                     mfr: row.querySelector('.input-mfr').value.trim().toUpperCase(),
-                    doc: row.querySelector('.input-doc').value.trim().toUpperCase(),
+                    doc: docInput.value.trim().toUpperCase(),
+                    docFile: docInput._attachedFile || null, // Objek File asli tersimpan di sini
                     uplant: row.querySelector('.input-uplant').value.trim().toUpperCase(),
                     uloc: row.querySelector('.input-uloc').value.trim().toUpperCase(),
                     rplant: row.querySelector('.input-rplant').value.trim().toUpperCase(),

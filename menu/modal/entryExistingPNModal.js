@@ -26,8 +26,11 @@ export function openEntryModal(config) {
             }
             
             /* Efek highlight biru seperti excel saat cell di klik */
-            .excel-input:focus { background: #eff6ff; box-shadow: inset 0 0 0 2px var(--primary); }
-            
+            .excel-input:focus { 
+                background: var(--bg-card); 
+                box-shadow: inset 0 0 0 2px var(--primary); 
+            }
+                        
             /* Dark mode support untuk sel yang aktif */
             @media (prefers-color-scheme: dark) {
                 .excel-input:focus { background: #1e3a8a; }

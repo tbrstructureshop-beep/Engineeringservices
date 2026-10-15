@@ -316,7 +316,9 @@
         </form>
     </div>
 
-    <script>
+    <script type="module">
+        import { supabase } from '../config/user/supabaseClient.js';
+
         // Tab Switcher
         const tabLogin = document.getElementById('tab-login');
         const tabRegister = document.getElementById('tab-register');
@@ -337,7 +339,7 @@
             formLogin.classList.remove('active');
         });
 
-        // Peek Ability (Show / Hide Password)
+        // Peek Ability
         document.querySelectorAll('.btn-peek').forEach(btn => {
             btn.addEventListener('click', () => {
                 const targetId = btn.getAttribute('data-target');
@@ -354,67 +356,131 @@
             });
         });
 
-        // Handle Login
-        formLogin.addEventListener('submit', (e) => {
+        // ================= HANDLE LOGIN (SUPABASE) =================
+        formLogin.addEventListener('submit', async (e) => {
             e.preventDefault();
             const empId = document.getElementById('login-empid').value.trim();
+            const password = document.getElementById('login-password').value.trim();
 
-            // Cek apakah ada data register sebelumnya di localStorage
-            const storedUser = JSON.parse(localStorage.getItem('registeredUsers_' + empId));
+            Swal.fire({
+                title: 'Memverifikasi...',
+                didOpen: () => Swal.showLoading(),
+                background: '#0f172a',
+                color: '#fff',
+                allowOutsideClick: false
+            });
 
-            const userData = storedUser || {
-                name: "Muhammad Rizki F",
-                initials: "MR",
-                empId: empId,
-                unit: "TCP-10 (Engineering Support)",
-                role: "Requester"
+            const { data: user, error } = await supabase
+                .from('app_users')
+                .select('*')
+                .eq('emp_id', empId)
+                .single();
+
+            if (error || !user) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Login Gagal',
+                    text: 'Employee ID No. tidak ditemukan di sistem!',
+                    background: '#0f172a',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            if (user.password !== password) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Login Gagal',
+                    text: 'Password yang Anda masukkan salah!',
+                    background: '#0f172a',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            if (user.status !== 'APPROVED') {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Akun Belum Disetujui',
+                    text: 'Akun Anda masih berstatus PENDING. Harap hubungi Admin TED-2 untuk aktivasi.',
+                    background: '#0f172a',
+                    color: '#fff'
+                });
+                return;
+            }
+
+            // Simpan session pengguna
+            const sessionData = {
+                empId: user.emp_id,
+                name: user.name,
+                unit: user.unit,
+                role: user.role,
+                initials: user.initials || 'US',
+                status: user.status
             };
-
-            // Simpan session aktif
-            localStorage.setItem('currentUser', JSON.stringify(userData));
+            localStorage.setItem('currentUser', JSON.stringify(sessionData));
 
             Swal.fire({
                 icon: 'success',
                 title: 'Login Berhasil!',
-                text: `Selamat datang, ${userData.name}`,
+                text: `Selamat datang, ${user.name}`,
                 timer: 1200,
                 showConfirmButton: false,
                 background: '#0f172a',
                 color: '#fff'
             }).then(() => {
-                // GANTI href MENJADI replace
                 window.location.replace('../index.html');
             });
         });
 
-        // Handle Register
-        formRegister.addEventListener('submit', (e) => {
+        // ================= HANDLE REGISTER (SUPABASE) =================
+        formRegister.addEventListener('submit', async (e) => {
             e.preventDefault();
             const name = document.getElementById('reg-name').value.trim();
-            const empId = document.getElementById('reg-empid').value.trim();
+            const emp_id = document.getElementById('reg-empid').value.trim();
             const unit = document.getElementById('reg-unit').value.trim();
             const role = document.getElementById('reg-role').value;
+            const password = document.getElementById('reg-password').value.trim();
 
-            // Generate Inisial (contoh: Muhammad Rizki -> MR)
             const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || "US";
 
-            const newUser = { name, empId, unit, role, initials };
+            Swal.fire({
+                title: 'Mendaftarkan akun...',
+                didOpen: () => Swal.showLoading(),
+                background: '#0f172a',
+                color: '#fff',
+                allowOutsideClick: false
+            });
 
-            // Simpan user baru
-            localStorage.setItem('registeredUsers_' + empId, JSON.stringify(newUser));
-            localStorage.setItem('currentUser', JSON.stringify(newUser));
+            // Insert ke Supabase dengan status default PENDING
+            const { error } = await supabase
+                .from('app_users')
+                .insert([
+                    { emp_id, name, unit, role, password, initials, status: 'PENDING' }
+                ]);
+
+            if (error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Pendaftaran Gagal',
+                    text: error.code === '23505' ? 'Employee ID sudah terdaftar!' : error.message,
+                    background: '#0f172a',
+                    color: '#fff'
+                });
+                return;
+            }
 
             Swal.fire({
                 icon: 'success',
-                title: 'Registrasi Berhasil!',
-                text: 'Akun Anda berhasil didaftarkan.',
-                timer: 1500,
-                showConfirmButton: false,
+                title: 'Pendaftaran Terkirim!',
+                text: 'Akun Anda berhasil didaftarkan dengan status PENDING. Silakan minta Admin TED-2 untuk menyetujui akun Anda.',
+                confirmButtonColor: '#2563eb',
                 background: '#0f172a',
                 color: '#fff'
             }).then(() => {
-                // GANTI href MENJADI replace
-                window.location.replace('../index.html');
+                tabLogin.click();
+                document.getElementById('login-empid').value = emp_id;
+                document.getElementById('login-password').value = '';
             });
         });
     </script>

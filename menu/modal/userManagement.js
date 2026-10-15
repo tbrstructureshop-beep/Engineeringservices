@@ -57,9 +57,11 @@ export async function openUserManagementModal() {
     };
     let currentPage = 1;
     let pageSize = 10; // 10, 25, 50, atau Infinity ('ALL')
+    let pendingDeleteTempId = null;
 
     const htmlForm = `
         <style>
+            .mgmt-container-wrapper { position: relative; }
             .mgmt-toolbar {
                 display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center;
                 background: var(--bg-main); padding: 12px 16px; border-radius: 8px; border: 1px solid var(--border-color);
@@ -114,13 +116,8 @@ export async function openUserManagementModal() {
                 background: var(--bg-card); 
                 box-shadow: inset 0 0 0 2px var(--primary); 
             }
-            /* Seamless Select Dropdown */
-            select.user-input {
-                cursor: pointer; appearance: auto; -webkit-appearance: auto;
-            }
-            select.user-input option {
-                background: var(--bg-card); color: var(--text-main);
-            }
+            select.user-input { cursor: pointer; appearance: auto; -webkit-appearance: auto; }
+            select.user-input option { background: var(--bg-card); color: var(--text-main); }
             .status-select-approved { color: #166534 !important; font-weight: 700; background: #dcfce7 !important; }
             .status-select-pending { color: #92400e !important; font-weight: 700; background: #fef3c7 !important; }
 
@@ -144,94 +141,142 @@ export async function openUserManagementModal() {
             }
             .pagination-btn:disabled { opacity: 0.4; cursor: not-allowed; }
             .pagination-btn:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }
+
+            /* In-Modal Floating Toast */
+            .inmodal-toast-container {
+                position: absolute; top: 10px; right: 10px; z-index: 999;
+                display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+            }
+            .inmodal-toast {
+                pointer-events: auto; background: #0f172a; color: #ffffff;
+                padding: 9px 16px; border-radius: 8px; font-size: 0.82rem; font-weight: 500;
+                display: flex; align-items: center; gap: 8px; box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+                border: 1px solid rgba(255,255,255,0.15); animation: toastFadeIn 0.2s ease-out;
+            }
+            @keyframes toastFadeIn {
+                from { opacity: 0; transform: translateY(-8px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            /* In-Modal Delete Dialog Overlay */
+            .inmodal-confirm-overlay {
+                position: absolute; inset: 0; background: rgba(15, 23, 42, 0.7);
+                backdrop-filter: blur(2px); z-index: 1000; border-radius: 12px;
+                display: none; align-items: center; justify-content: center;
+            }
+            .inmodal-confirm-card {
+                background: var(--bg-card); border: 1px solid var(--border-color);
+                border-radius: 12px; padding: 22px 26px; max-width: 360px; width: 90%;
+                text-align: center; box-shadow: 0 16px 36px rgba(0,0,0,0.35);
+            }
         </style>
 
-        <!-- Top Header & Tabs -->
-        <div class="mgmt-toolbar">
-            <div class="mgmt-tabs">
-                <button type="button" class="mgmt-tab-btn active" data-tab="ALL">
-                    <i class="ph ph-users"></i> All Users <span class="tab-count-badge" id="badge-count-all">0</span>
-                </button>
-                <button type="button" class="mgmt-tab-btn" data-tab="APPROVED">
-                    <i class="ph ph-check-circle"></i> Approved <span class="tab-count-badge" id="badge-count-approved">0</span>
-                </button>
-                <button type="button" class="mgmt-tab-btn" data-tab="PENDING">
-                    <i class="ph ph-clock"></i> Pending <span class="tab-count-badge" id="badge-count-pending">0</span>
-                </button>
-            </div>
-            <div style="display: flex; gap: 8px;">
-                <button type="button" id="btn-toggle-filter" class="pagination-btn" style="display:flex; align-items:center; gap:5px;">
-                    <i class="ph ph-funnel"></i> <span id="toggle-filter-label">Activate Column Filter</span>
-                </button>
-                <button type="button" id="btn-approve-all" class="pagination-btn" style="background:#dcfce7; color:#166534; border-color:#bbf7d0; font-weight:600;">
-                    <i class="ph ph-checks"></i> Approve All Pending
-                </button>
-            </div>
-        </div>
+        <div class="mgmt-container-wrapper">
+            <!-- Toast Container -->
+            <div id="inmodal-toast-box" class="inmodal-toast-container"></div>
 
-        <!-- Global Search, Rows Page Size, Add User -->
-        <div class="mgmt-controls">
-            <div style="display: flex; gap: 10px; align-items: center; flex: 1;">
-                <div class="search-box-wrapper">
-                    <i class="ph ph-magnifying-glass"></i>
-                    <input type="text" id="mgmt-global-search" class="mgmt-search-input" placeholder="Search across all columns...">
-                </div>
-                <div style="display: flex; align-items: center; gap: 6px;">
-                    <span>Show:</span>
-                    <select id="mgmt-page-size" class="mgmt-search-input" style="width: auto; height: 34px; padding: 0 8px;">
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="ALL">All Data</option>
-                    </select>
+            <!-- In-Modal Delete Confirmation Overlay -->
+            <div id="inmodal-delete-overlay" class="inmodal-confirm-overlay">
+                <div class="inmodal-confirm-card">
+                    <i class="ph ph-warning-circle" style="font-size: 2.4rem; color: #ef4444; margin-bottom: 6px; display: inline-block;"></i>
+                    <h4 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 4px;">Konfirmasi Hapus</h4>
+                    <p id="inmodal-delete-text" style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 18px; line-height: 1.4;">
+                        Apakah Anda yakin ingin menghapus akun ini?
+                    </p>
+                    <div style="display: flex; gap: 8px; justify-content: center;">
+                        <button type="button" id="btn-cancel-inmodal-delete" class="pagination-btn" style="padding: 7px 16px;">Batal</button>
+                        <button type="button" id="btn-confirm-inmodal-delete" class="pagination-btn" style="background: #ef4444; color: #fff; border:none; padding: 7px 16px; font-weight: 600;">Ya, Hapus</button>
+                    </div>
                 </div>
             </div>
-            <div>
-                <button id="btn-add-user-row" type="button" class="pagination-btn" style="background: #10b981; color: #fff; border:none; height: 34px; padding: 0 14px; font-weight:600; display:flex; align-items:center; gap:6px;">
-                    <i class="ph ph-user-plus"></i> Add User Row
-                </button>
+
+            <!-- Top Header & Tabs -->
+            <div class="mgmt-toolbar">
+                <div class="mgmt-tabs">
+                    <button type="button" class="mgmt-tab-btn active" data-tab="ALL">
+                        <i class="ph ph-users"></i> All Users <span class="tab-count-badge" id="badge-count-all">0</span>
+                    </button>
+                    <button type="button" class="mgmt-tab-btn" data-tab="APPROVED">
+                        <i class="ph ph-check-circle"></i> Approved <span class="tab-count-badge" id="badge-count-approved">0</span>
+                    </button>
+                    <button type="button" class="mgmt-tab-btn" data-tab="PENDING">
+                        <i class="ph ph-clock"></i> Pending <span class="tab-count-badge" id="badge-count-pending">0</span>
+                    </button>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" id="btn-toggle-filter" class="pagination-btn" style="display:flex; align-items:center; gap:5px;">
+                        <i class="ph ph-funnel"></i> <span id="toggle-filter-label">Activate Column Filter</span>
+                    </button>
+                    <button type="button" id="btn-approve-all" class="pagination-btn" style="background:#dcfce7; color:#166534; border-color:#bbf7d0; font-weight:600;">
+                        <i class="ph ph-checks"></i> Approve All Pending
+                    </button>
+                </div>
             </div>
-        </div>
 
-        <!-- Table Container -->
-        <div style="margin-top: 10px; overflow-x: auto; max-height: 48vh; border: 1px solid var(--border-color); border-radius: 6px;">
-            <table class="user-table">
-                <thead style="position: sticky; top: 0; z-index: 10;">
-                    <tr>
-                        <th style="position: sticky; left: 0; z-index: 11; width: 45px;">ACT</th>
-                        <th style="width: 150px;">STATUS REGISTRASI</th>
-                        <th style="width: 150px;">EMPLOYEE ID NO.</th>
-                        <th style="width: 250px;">FULL NAME</th>
-                        <th style="width: 260px;">UNIT / DEPARTMENT</th>
-                        <th style="width: 190px;">ROLE</th>
-                        <th style="width: 160px;">DEFAULT PASSWORD</th>
-                    </tr>
-                    <!-- Filter Row (Toggleable) -->
-                    <tr id="mgmt-filter-row" class="filter-row" style="display: none;">
-                        <th style="position: sticky; left: 0; z-index: 11; text-align:center;">
-                            <button id="btn-clear-filters" title="Reset Filters" style="background:none; border:none; cursor:pointer; color:var(--text-muted);"><i class="ph ph-arrow-counter-clockwise"></i></button>
-                        </th>
-                        <th><input type="text" class="filter-input" data-col="status" placeholder="Filter status..."></th>
-                        <th><input type="text" class="filter-input" data-col="emp_id" placeholder="Filter ID..."></th>
-                        <th><input type="text" class="filter-input" data-col="name" placeholder="Filter name..."></th>
-                        <th><input type="text" class="filter-input" data-col="unit" placeholder="Filter unit..."></th>
-                        <th><input type="text" class="filter-input" data-col="role" placeholder="Filter role..."></th>
-                        <th><input type="text" class="filter-input" data-col="password" placeholder="Filter pass..."></th>
-                    </tr>
-                </thead>
-                <tbody id="user-mgmt-tbody"></tbody>
-            </table>
-        </div>
+            <!-- Controls: Search, Rows, Add User -->
+            <div class="mgmt-controls">
+                <div style="display: flex; gap: 10px; align-items: center; flex: 1;">
+                    <div class="search-box-wrapper">
+                        <i class="ph ph-magnifying-glass"></i>
+                        <input type="text" id="mgmt-global-search" class="mgmt-search-input" placeholder="Search across all columns...">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span>Show:</span>
+                        <select id="mgmt-page-size" class="mgmt-search-input" style="width: auto; height: 34px; padding: 0 8px;">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                            <option value="ALL">All Data</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <button id="btn-add-user-row" type="button" class="pagination-btn" style="background: #10b981; color: #fff; border:none; height: 34px; padding: 0 14px; font-weight:600; display:flex; align-items:center; gap:6px;">
+                        <i class="ph ph-user-plus"></i> Add User Row
+                    </button>
+                </div>
+            </div>
 
-        <!-- Pagination Controls -->
-        <div class="mgmt-pagination">
-            <span id="mgmt-page-info">Showing 0 to 0 of 0 users</span>
-            <div style="display: flex; gap: 6px; align-items: center;">
-                <button type="button" class="pagination-btn" id="btn-page-first" title="First Page"><i class="ph ph-caret-double-left"></i></button>
-                <button type="button" class="pagination-btn" id="btn-page-prev" title="Previous Page"><i class="ph ph-caret-left"></i> Prev</button>
-                <span id="mgmt-page-number" style="font-weight: 600; padding: 0 8px;">Page 1 of 1</span>
-                <button type="button" class="pagination-btn" id="btn-page-next" title="Next Page">Next <i class="ph ph-caret-right"></i></button>
-                <button type="button" class="pagination-btn" id="btn-page-last" title="Last Page"><i class="ph ph-caret-double-right"></i></button>
+            <!-- Table Container -->
+            <div style="margin-top: 10px; overflow-x: auto; max-height: 48vh; border: 1px solid var(--border-color); border-radius: 6px;">
+                <table class="user-table">
+                    <thead style="position: sticky; top: 0; z-index: 10;">
+                        <tr>
+                            <th style="position: sticky; left: 0; z-index: 11; width: 45px;">ACT</th>
+                            <th style="width: 150px;">STATUS REGISTRASI</th>
+                            <th style="width: 150px;">EMPLOYEE ID NO.</th>
+                            <th style="width: 250px;">FULL NAME</th>
+                            <th style="width: 260px;">UNIT / DEPARTMENT</th>
+                            <th style="width: 190px;">ROLE</th>
+                            <th style="width: 160px;">DEFAULT PASSWORD</th>
+                        </tr>
+                        <!-- Filter Row (Toggleable) -->
+                        <tr id="mgmt-filter-row" class="filter-row" style="display: none;">
+                            <th style="position: sticky; left: 0; z-index: 11; text-align:center;">
+                                <button id="btn-clear-filters" title="Reset Filters" style="background:none; border:none; cursor:pointer; color:var(--text-muted);"><i class="ph ph-arrow-counter-clockwise"></i></button>
+                            </th>
+                            <th><input type="text" class="filter-input" data-col="status" placeholder="Filter status..."></th>
+                            <th><input type="text" class="filter-input" data-col="emp_id" placeholder="Filter ID..."></th>
+                            <th><input type="text" class="filter-input" data-col="name" placeholder="Filter name..."></th>
+                            <th><input type="text" class="filter-input" data-col="unit" placeholder="Filter unit..."></th>
+                            <th><input type="text" class="filter-input" data-col="role" placeholder="Filter role..."></th>
+                            <th><input type="text" class="filter-input" data-col="password" placeholder="Filter pass..."></th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-mgmt-tbody"></tbody>
+                </table>
+            </div>
+
+            <!-- Pagination Controls -->
+            <div class="mgmt-pagination">
+                <span id="mgmt-page-info">Showing 0 to 0 of 0 users</span>
+                <div style="display: flex; gap: 6px; align-items: center;">
+                    <button type="button" class="pagination-btn" id="btn-page-first" title="First Page"><i class="ph ph-caret-double-left"></i></button>
+                    <button type="button" class="pagination-btn" id="btn-page-prev" title="Previous Page"><i class="ph ph-caret-left"></i> Prev</button>
+                    <span id="mgmt-page-number" style="font-weight: 600; padding: 0 8px;">Page 1 of 1</span>
+                    <button type="button" class="pagination-btn" id="btn-page-next" title="Next Page">Next <i class="ph ph-caret-right"></i></button>
+                    <button type="button" class="pagination-btn" id="btn-page-last" title="Last Page"><i class="ph ph-caret-double-right"></i></button>
+                </div>
             </div>
         </div>
     `;
@@ -248,19 +293,26 @@ export async function openUserManagementModal() {
         cancelButtonColor: '#64748b',
         focusConfirm: false,
         didOpen: () => {
-            // Helper Toast Notif
-            const showToast = (icon, title) => {
-                const Toast = Swal.mixin({
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 2200,
-                    timerProgressBar: true,
-                    background: 'var(--bg-card)',
-                    color: 'var(--text-main)'
-                });
-                Toast.fire({ icon, title });
-            };
+            const toastBox = document.getElementById('inmodal-toast-box');
+            const deleteOverlay = document.getElementById('inmodal-delete-overlay');
+            const deleteText = document.getElementById('inmodal-delete-text');
+            const btnCancelDelete = document.getElementById('btn-cancel-inmodal-delete');
+            const btnConfirmDelete = document.getElementById('btn-confirm-inmodal-delete');
+
+            // 1. NOTIFIKASI TOAST MANDIRI (Tidak memakai Swal.fire, modal tetap aman terbuka)
+            function showInModalToast(iconClass, message, color = '#10b981') {
+                const toast = document.createElement('div');
+                toast.className = 'inmodal-toast';
+                toast.innerHTML = `<i class="${iconClass}" style="color:${color}; font-size:1.15rem;"></i> <span>${message}</span>`;
+                toastBox.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.transition = 'opacity 0.3s, transform 0.3s';
+                    toast.style.opacity = '0';
+                    toast.style.transform = 'translateY(-6px)';
+                    setTimeout(() => toast.remove(), 300);
+                }, 2400);
+            }
 
             const tbody = document.getElementById('user-mgmt-tbody');
             const pageInfo = document.getElementById('mgmt-page-info');
@@ -270,7 +322,6 @@ export async function openUserManagementModal() {
             const btnFirst = document.getElementById('btn-page-first');
             const btnLast = document.getElementById('btn-page-last');
 
-            // Hitung & update badge tab
             function updateBadges() {
                 const total = usersList.length;
                 const approved = usersList.filter(u => u.status === 'APPROVED').length;
@@ -281,20 +332,16 @@ export async function openUserManagementModal() {
                 document.getElementById('badge-count-pending').textContent = pending;
             }
 
-            // Filter logic
             function getFilteredUsers() {
                 return usersList.filter(user => {
-                    // 1. Tab filter
                     if (currentTab === 'APPROVED' && user.status !== 'APPROVED') return false;
                     if (currentTab === 'PENDING' && user.status !== 'PENDING') return false;
 
-                    // 2. Global search
                     if (globalSearch) {
                         const hay = `${user.emp_id} ${user.name} ${user.unit} ${user.role} ${user.status}`.toLowerCase();
                         if (!hay.includes(globalSearch.toLowerCase())) return false;
                     }
 
-                    // 3. Column contains filters
                     if (isFilterActive) {
                         for (const key of Object.keys(colFilters)) {
                             const val = (colFilters[key] || '').toLowerCase().trim();
@@ -309,7 +356,6 @@ export async function openUserManagementModal() {
                 });
             }
 
-            // Render baris tabel
             function renderTable() {
                 updateBadges();
                 const filtered = getFilteredUsers();
@@ -370,7 +416,6 @@ export async function openUserManagementModal() {
                     });
                 }
 
-                // Update pagination info
                 pageInfo.textContent = totalItems > 0 
                     ? `Showing ${startIdx + 1} to ${endIdx} of ${totalItems} users` 
                     : `Showing 0 to 0 of 0 users`;
@@ -382,7 +427,7 @@ export async function openUserManagementModal() {
                 btnLast.disabled = currentPage >= totalPages;
             }
 
-            // Sync setiap perubahan input/select ke state array `usersList`
+            // Sync input & select ke in-memory state
             tbody.addEventListener('input', (e) => {
                 const target = e.target;
                 const tempId = target.dataset.tempid;
@@ -390,9 +435,7 @@ export async function openUserManagementModal() {
                 if (!tempId || !field) return;
 
                 const user = usersList.find(u => u._tempId === tempId);
-                if (user) {
-                    user[field] = target.value;
-                }
+                if (user) user[field] = target.value;
             });
 
             tbody.addEventListener('change', (e) => {
@@ -415,7 +458,7 @@ export async function openUserManagementModal() {
                 }
             });
 
-            // Tab Switching
+            // Tabs
             document.querySelectorAll('.mgmt-tab-btn').forEach(btn => {
                 btn.addEventListener('click', () => {
                     document.querySelectorAll('.mgmt-tab-btn').forEach(b => b.classList.remove('active'));
@@ -426,14 +469,14 @@ export async function openUserManagementModal() {
                 });
             });
 
-            // Global Search Input
+            // Search
             document.getElementById('mgmt-global-search').addEventListener('input', (e) => {
                 globalSearch = e.target.value.trim();
                 currentPage = 1;
                 renderTable();
             });
 
-            // Page Size Change
+            // Page Size
             document.getElementById('mgmt-page-size').addEventListener('change', (e) => {
                 const val = e.target.value;
                 pageSize = val === 'ALL' ? Infinity : parseInt(val, 10);
@@ -441,7 +484,7 @@ export async function openUserManagementModal() {
                 renderTable();
             });
 
-            // Pagination Buttons
+            // Pagination Controls
             btnFirst.addEventListener('click', () => { currentPage = 1; renderTable(); });
             btnPrev.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderTable(); } });
             btnNext.addEventListener('click', () => { currentPage++; renderTable(); });
@@ -452,7 +495,7 @@ export async function openUserManagementModal() {
                 renderTable();
             });
 
-            // Toggle Column Filters
+            // Toggle Filter
             const filterRow = document.getElementById('mgmt-filter-row');
             const toggleFilterBtn = document.getElementById('btn-toggle-filter');
             const toggleFilterLabel = document.getElementById('toggle-filter-label');
@@ -465,39 +508,38 @@ export async function openUserManagementModal() {
                     toggleFilterBtn.style.color = '#1d4ed8';
                     toggleFilterBtn.style.borderColor = '#93c5fd';
                     toggleFilterLabel.textContent = 'Deactivate Column Filter';
-                    showToast('info', 'Filter per kolom diaktifkan');
+                    showInModalToast('ph ph-funnel', 'Filter per kolom diaktifkan', '#3b82f6');
                 } else {
                     filterRow.style.display = 'none';
                     toggleFilterBtn.style.background = 'var(--bg-main)';
                     toggleFilterBtn.style.color = 'var(--text-main)';
                     toggleFilterBtn.style.borderColor = 'var(--border-color)';
                     toggleFilterLabel.textContent = 'Activate Column Filter';
-                    showToast('info', 'Filter per kolom dinonaktifkan');
+                    showInModalToast('ph ph-funnel', 'Filter per kolom dinonaktifkan', '#64748b');
                 }
                 currentPage = 1;
                 renderTable();
             });
 
-            // Input Column Filter (Contains)
+            // Column Inputs (Contains)
             document.querySelectorAll('.filter-input').forEach(input => {
                 input.addEventListener('input', (e) => {
-                    const col = e.target.dataset.col;
-                    colFilters[col] = e.target.value;
+                    colFilters[e.target.dataset.col] = e.target.value;
                     currentPage = 1;
                     renderTable();
                 });
             });
 
-            // Reset Filter Inputs
+            // Reset Filter
             document.getElementById('btn-clear-filters').addEventListener('click', () => {
                 document.querySelectorAll('.filter-input').forEach(inp => inp.value = '');
                 Object.keys(colFilters).forEach(k => colFilters[k] = '');
                 currentPage = 1;
                 renderTable();
-                showToast('info', 'Filter kolom di-reset');
+                showInModalToast('ph ph-arrow-counter-clockwise', 'Filter kolom di-reset', '#64748b');
             });
 
-            // Tombol Add User Row
+            // Add Row
             document.getElementById('btn-add-user-row').addEventListener('click', () => {
                 const newId = `new_${Date.now()}`;
                 const newUser = {
@@ -510,13 +552,13 @@ export async function openUserManagementModal() {
                     password: 'password123',
                     initials: ''
                 };
-                usersList.unshift(newUser); // taruh di posisi paling atas
+                usersList.unshift(newUser);
                 currentPage = 1;
                 renderTable();
-                showToast('success', 'Baris user baru ditambahkan!');
+                showInModalToast('ph ph-user-plus', 'Baris user baru ditambahkan!', '#10b981');
             });
 
-            // Tombol Approve All Pending
+            // Approve All Pending
             document.getElementById('btn-approve-all').addEventListener('click', () => {
                 let count = 0;
                 usersList.forEach(u => {
@@ -527,13 +569,13 @@ export async function openUserManagementModal() {
                 });
                 renderTable();
                 if (count > 0) {
-                    showToast('success', `${count} user pending diubah menjadi APPROVED!`);
+                    showInModalToast('ph ph-checks', `${count} user pending diubah menjadi APPROVED!`, '#10b981');
                 } else {
-                    showToast('info', 'Tidak ada user pending yang ditemukan.');
+                    showInModalToast('ph ph-info', 'Tidak ada user pending yang ditemukan.', '#64748b');
                 }
             });
 
-            // Tombol Hapus User dengan Konfirmasi SweetAlert
+            // 2. DIALOG HAPUS INTERNAL (Bukan Swal.fire baru, modal tetap stabil di layar)
             tbody.addEventListener('click', (e) => {
                 const btn = e.target.closest('.btn-del-user');
                 if (!btn) return;
@@ -541,27 +583,28 @@ export async function openUserManagementModal() {
                 const user = usersList.find(u => u._tempId === tempId);
                 if (!user) return;
 
-                Swal.fire({
-                    title: 'Hapus User?',
-                    text: `Apakah Anda yakin ingin menghapus akun ${user.name || user.emp_id || 'ini'}?`,
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonColor: '#ef4444',
-                    cancelButtonColor: '#64748b',
-                    confirmButtonText: 'Ya, Hapus',
-                    cancelButtonText: 'Batal',
-                    background: 'var(--bg-card)',
-                    color: 'var(--text-main)'
-                }).then((res) => {
-                    if (res.isConfirmed) {
-                        if (user.emp_id) {
-                            deletedEmpIds.push(user.emp_id);
-                        }
-                        usersList = usersList.filter(u => u._tempId !== tempId);
-                        renderTable();
-                        showToast('success', `User ${user.name || user.emp_id} berhasil dihapus.`);
+                pendingDeleteTempId = tempId;
+                deleteText.textContent = `Apakah Anda yakin ingin menghapus user "${user.name || user.emp_id || 'ini'}"?`;
+                deleteOverlay.style.display = 'flex';
+            });
+
+            btnCancelDelete.addEventListener('click', () => {
+                deleteOverlay.style.display = 'none';
+                pendingDeleteTempId = null;
+            });
+
+            btnConfirmDelete.addEventListener('click', () => {
+                if (pendingDeleteTempId) {
+                    const user = usersList.find(u => u._tempId === pendingDeleteTempId);
+                    if (user && user.emp_id) {
+                        deletedEmpIds.push(user.emp_id);
                     }
-                });
+                    usersList = usersList.filter(u => u._tempId !== pendingDeleteTempId);
+                    renderTable();
+                    showInModalToast('ph ph-trash', `User "${user?.name || user?.emp_id || ''}" berhasil dihapus.`, '#ef4444');
+                }
+                deleteOverlay.style.display = 'none';
+                pendingDeleteTempId = null;
             });
 
             // Render pertama kali
@@ -598,7 +641,6 @@ export async function openUserManagementModal() {
             }
 
             try {
-                // 1. Eksekusi hapus di Supabase jika ada user yang dibuang
                 if (deletedEmpIds.length > 0) {
                     const { error: delError } = await supabase
                         .from('app_users')
@@ -607,7 +649,6 @@ export async function openUserManagementModal() {
                     if (delError) throw delError;
                 }
 
-                // 2. Eksekusi Upsert (insert/update) ke Supabase
                 const { error: upsertError } = await supabase
                     .from('app_users')
                     .upsert(upsertPayload, { onConflict: 'emp_id' });
@@ -625,7 +666,7 @@ export async function openUserManagementModal() {
             Swal.fire({
                 icon: 'success',
                 title: 'Data Tersimpan di Supabase!',
-                text: `${result.value.length} akun berhasil disinkronkan ke cloud database.`,
+                text: `${result.value.length} akun berhasil disinkronkan ke database.`,
                 timer: 1800,
                 showConfirmButton: false,
                 background: 'var(--bg-card)',

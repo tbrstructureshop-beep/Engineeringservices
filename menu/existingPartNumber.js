@@ -1,228 +1,257 @@
-// File: menu/modal/notifExistingPNModal.js
+// File: menu/existingPartNumber.js
+import { openEntryModal } from './modal/entryExistingPNModal.js'; 
+import { openNotifModal } from './modal/notifExistingPNModal.js'; // <-- Tambahkan import ini
 
-export function openNotifModal(ticket) {
-    // 1. Tentukan status wording untuk Admin
-    let adminStatusNote = "Telah Kami Terima";
-    if (ticket.status === 'Under Evaluation') {
-        adminStatusNote = "Sedang Dalam Evaluasi";
-    } else if (ticket.status === 'Created') {
-        adminStatusNote = "Telah Di-create di SAP";
-    }
-
-    // 2. Format list PN
-    const formattedPNList = ticket.pns.map((p, idx) => {
-        return `   ${idx + 1}. [${p.pn}] ${p.desc} (Type: ${p.type || '-'}, Qty: ${p.uom || '-'})`;
-    }).join('\n');
-
-    // 3. Template Generator
-    function generateTemplates() {
-        return {
-            requester: {
-                subject: `[Request Existing PN] Mohon Proses Tiket #${ticket.ticketNo} - ${ticket.requester}`,
-                body: `Dear Tim TED-2 (Engineering Support),\n\nMohon bantuannya untuk memproses pengajuan Existing Material dengan Nomor Tiket: #${ticket.ticketNo}\n\nListed PN:\n${formattedPNList}\n\nAdapun info lebih lanjut dan detail data dapat diakses di:\nhttps://gmfengineeringservices.netlify.app/\n\nTerima kasih atas bantuan dan kerja samanya.\n\nSalam,\n${ticket.requester}\nDepartment: ${ticket.dept || '-'}`
-            },
-            admin: {
-                subject: `[Update Status: ${ticket.status.toUpperCase()}] Tiket Existing PN #${ticket.ticketNo}`,
-                body: `Dear ${ticket.requester},\n\nPengajuan Existing PN Anda dengan Nomor Tiket: #${ticket.ticketNo} dan dengan list PN berikut:\n\n${formattedPNList}\n\nStatus saat ini: (${adminStatusNote}).\n\nSilakan untuk dilakukan pengecekan di SAP dan pantau pembaruan tiket di:\nhttps://gmfengineeringservices.netlify.app/\n\nTerima kasih.\n\nSalam,\nTim TED-2 (Engineering Support)`
-            }
-        };
-    }
-
-    const templates = generateTemplates();
-
-    // Default role: jika status 'Created', default ke Admin; jika Received/Under Evaluation, default ke Requester
-    let currentRole = (ticket.status === 'Created') ? 'admin' : 'requester';
-
-    let htmlContent = `
+export function render(container) {
+    container.innerHTML = `
         <style>
-            .role-switch-container {
-                display: flex; gap: 10px; margin-bottom: 15px; background: var(--bg-main); padding: 6px; border-radius: 8px; border: 1px solid var(--border-color);
+            .action-dropdown { position: relative; display: inline-block; }
+            .action-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); transition: 0.2s; padding: 4px; border-radius: 4px;}
+            .action-btn:hover { background: var(--bg-main); color: var(--primary); }
+            
+            .dropdown-content-fixed {
+                display: none; position: fixed;
+                background-color: var(--bg-card); min-width: 170px;
+                box-shadow: 0px 4px 15px rgba(0,0,0,0.15); z-index: 9999;
+                border-radius: 8px; border: 1px solid var(--border-color);
+                flex-direction: column; text-align: left;
             }
-            .role-btn {
-                flex: 1; padding: 10px 14px; border: none; background: transparent; color: var(--text-muted);
-                font-size: 0.85rem; font-weight: 600; cursor: pointer; border-radius: 6px; transition: all 0.2s ease;
-                display: flex; align-items: center; justify-content: center; gap: 8px;
+            .dropdown-content-fixed.show { display: flex; }
+            .dropdown-item {
+                padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 0.85rem; color: var(--text-main); font-weight: 500;
             }
-            .role-btn.active {
-                background: var(--bg-card); color: var(--primary); box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-            }
-            .email-field-group { text-align: left; margin-bottom: 12px; }
-            .email-field-group label {
-                display: block; font-size: 0.75rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 4px;
-            }
-            .email-input-text {
-                width: 100%; padding: 8px 12px; border: 1px solid var(--border-color); background: var(--bg-main);
-                color: var(--text-main); font-size: 0.85rem; border-radius: 6px; outline: none; font-family: inherit;
-            }
-            .email-textarea {
-                width: 100%; height: 230px; padding: 12px; border: 1px solid var(--border-color); background: var(--bg-main);
-                color: var(--text-main); font-size: 0.85rem; border-radius: 6px; outline: none; font-family: 'Consolas', 'Courier New', monospace;
-                line-height: 1.5; resize: vertical; white-space: pre-wrap;
-            }
-            .email-textarea:focus, .email-input-text:focus {
-                border-color: var(--primary);
-            }
-
-            /* Container Tombol Buka Outlook */
-            .outlook-launch-group {
-                background: var(--bg-main); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);
-                margin-top: 14px; text-align: left;
-            }
-            .launch-buttons-grid {
-                display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin-top: 8px;
-            }
-            .btn-launch {
-                padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 6px;
-                font-size: 0.8rem; font-weight: 600; cursor: pointer; display: flex; align-items: center;
-                justify-content: center; gap: 8px; transition: all 0.2s ease; background: var(--bg-card);
-                color: var(--text-main);
-            }
-            .btn-launch:hover {
-                transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            }
-            .btn-launch-app:hover { border-color: #0284c7; color: #0284c7; }
-            .btn-launch-web-corp:hover { border-color: #2563eb; color: #2563eb; background: rgba(37, 99, 235, 0.05); }
-            .btn-launch-web-live:hover { border-color: #0ea5e9; color: #0ea5e9; background: rgba(14, 165, 233, 0.05); }
+            .dropdown-item:hover { background-color: var(--bg-main); }
+            .dropdown-item.text-red { color: #ef4444; }
+            .dropdown-item.text-red:hover { background-color: #fef2f2; }
+            
+            .pn-list { display: flex; flex-wrap: wrap; gap: 6px; }
+            .pn-badge { background: var(--bg-main); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: var(--text-main); }
         </style>
 
-        <!-- Role Selector Switch -->
-        <div class="role-switch-container">
-            <button type="button" class="role-btn ${currentRole === 'requester' ? 'active' : ''}" id="btn-role-requester">
-                <i class="ph ph-user"></i> Send as Requester
-            </button>
-            <button type="button" class="role-btn ${currentRole === 'admin' ? 'active' : ''}" id="btn-role-admin">
-                <i class="ph ph-shield-check"></i> Send as Admin (TED-2)
-            </button>
-        </div>
-
-        <!-- Subject Field -->
-        <div class="email-field-group">
-            <label><i class="ph ph-tag"></i> Email Subject</label>
-            <input type="text" id="email-subject" class="email-input-text" value="${templates[currentRole].subject}">
-        </div>
-
-        <!-- Body Field -->
-        <div class="email-field-group">
-            <label><i class="ph ph-envelope-open"></i> Email Body (Preview & Editable)</label>
-            <textarea id="email-body" class="email-textarea">${templates[currentRole].body}</textarea>
-        </div>
-
-        <!-- Direct Outlook Launchers -->
-        <div class="outlook-launch-group">
-            <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
-                <i class="ph ph-paper-plane-tilt"></i> Open Directly in Outlook:
+        <div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <div>
+                <h3 class="card-title" style="margin-bottom: 5px;"><i class="ph ph-hard-drives"></i> Existing Part Number Tickets</h3>
+                <p style="font-size: 0.85rem; color: var(--text-muted);">Manage material tracking by Ticket.</p>
             </div>
-            <div class="launch-buttons-grid">
-                <button type="button" class="btn-launch btn-launch-app" id="btn-launch-app" title="Buka aplikasi Outlook Desktop">
-                    <i class="ph ph-desktop" style="font-size: 1.1rem;"></i> Outlook Desktop
-                </button>
-                <button type="button" class="btn-launch btn-launch-web-corp" id="btn-launch-web-corp" title="Buka Outlook Web Microsoft 365 (Corporate)">
-                    <i class="ph ph-globe" style="font-size: 1.1rem;"></i> Web (Office 365)
-                </button>
-                <button type="button" class="btn-launch btn-launch-web-live" id="btn-launch-web-live" title="Buka Outlook Web Personal (Live/Hotmail)">
-                    <i class="ph ph-envelope-simple" style="font-size: 1.1rem;"></i> Web (Live / Hotmail)
-                </button>
+            <button id="btn-add-pn" class="btn-submit" style="margin-top: 0;">
+                <i class="ph ph-plus-circle"></i> Input New Data
+            </button>
+        </div>
+
+        <div class="card">
+            <h3 class="card-title"><i class="ph ph-table"></i> Dashboard Tiket SAP</h3>
+            <div class="table-responsive">
+                <table class="data-table" id="table-pn" style="min-width: 100%;">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px; text-align:center;">Action</th>
+                            <th>Ticket No</th>
+                            <th>Status</th>
+                            <th>Request Type</th>
+                            <th>Requester</th>
+                            <th>Requested PNs (MANU_MAT)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-pn"></tbody>
+                </table>
             </div>
+        </div>
+        
+        <div id="global-dropdown" class="dropdown-content-fixed">
+            <div class="dropdown-item btn-detail" id="dd-detail"><i class="ph ph-eye"></i> View Detail / Edit</div>
+            <div class="dropdown-item" id="dd-notif"><i class="ph ph-envelope-simple"></i> Outlook Notification</div>
+            <div class="dropdown-item text-red btn-delete" id="dd-delete"><i class="ph ph-trash"></i> Delete Ticket</div>
         </div>
     `;
 
-    Swal.fire({
-        title: `<span style="color: var(--text-main); font-size: 1.25rem;"><i class="ph ph-envelope-simple"></i> Outlook Notification Preview</span>`,
-        html: htmlContent,
-        width: '680px',
-        background: 'var(--bg-card)',
-        showCancelButton: true,
-        confirmButtonText: '<i class="ph ph-copy"></i> Copy Body Text',
-        confirmButtonColor: 'var(--primary)',
-        cancelButtonText: '<i class="ph ph-x"></i> Close',
-        cancelButtonColor: '#64748b',
-        didOpen: () => {
-            const btnRequester = document.getElementById('btn-role-requester');
-            const btnAdmin = document.getElementById('btn-role-admin');
-            const subjectInput = document.getElementById('email-subject');
-            const bodyInput = document.getElementById('email-body');
-
-            const btnLaunchApp = document.getElementById('btn-launch-app');
-            const btnLaunchWebCorp = document.getElementById('btn-launch-web-corp');
-            const btnLaunchWebLive = document.getElementById('btn-launch-web-live');
-
-            function updateUI(role) {
-                currentRole = role;
-                if (role === 'requester') {
-                    btnRequester.classList.add('active');
-                    btnAdmin.classList.remove('active');
-                } else {
-                    btnAdmin.classList.add('active');
-                    btnRequester.classList.remove('active');
-                }
-                subjectInput.value = templates[role].subject;
-                bodyInput.value = templates[role].body;
-            }
-
-            btnRequester.addEventListener('click', () => updateUI('requester'));
-            btnAdmin.addEventListener('click', () => updateUI('admin'));
-
-            // Helper untuk mengambil nilai saat ini & auto-copy ke clipboard
-            function preparePayload() {
-                const subject = subjectInput.value.trim();
-                const body = bodyInput.value.trim();
-                navigator.clipboard.writeText(body); // Copy cadangan
-                return { subject, body };
-            }
-
-            function showToast(message) {
-                Swal.fire({
-                    toast: true,
-                    position: 'top-end',
-                    icon: 'success',
-                    title: message,
-                    showConfirmButton: false,
-                    timer: 2500,
-                    background: 'var(--bg-card)',
-                    color: 'var(--text-main)'
-                });
-            }
-
-            // 1. Tombol Outlook Desktop (mailto)
-            btnLaunchApp.addEventListener('click', () => {
-                const { subject, body } = preparePayload();
-                window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                showToast('Membuka Outlook App (Text disalin ke clipboard)');
-            });
-
-            // 2. Tombol Outlook Web Office 365 (Corporate)
-            btnLaunchWebCorp.addEventListener('click', () => {
-                const { subject, body } = preparePayload();
-                const webCorpUrl = `https://outlook.office.com/mail/deeplink/compose?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                window.open(webCorpUrl, '_blank');
-                showToast('Membuka Outlook Web O365 (Text disalin ke clipboard)');
-            });
-
-            // 3. Tombol Outlook Web Live / Hotmail (Personal)
-            btnLaunchWebLive.addEventListener('click', () => {
-                const { subject, body } = preparePayload();
-                const webLiveUrl = `https://outlook.live.com/mail/0/deeplink/compose?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-                window.open(webLiveUrl, '_blank');
-                showToast('Membuka Outlook Web Live (Text disalin ke clipboard)');
-            });
+    // 1. DATA SEEDING
+    let ticketData = [
+        {
+            ticketNo: "492018", 
+            status: "Received", // Bisa Diedit
+            request: "EXISTING PN", 
+            requester: "Muhammad Rizki F", 
+            dept: "TCP-10",
+            pns: [
+                { pn: "CF1633N", desc: "FREEZER", type: "TOOLS", uom: "2 EA", dangerous: "NO", shelf: "NO", mfr: "MFR1", doc: "MANUAL_CF1633N.PDF", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" },
+                { pn: "HEX-BOLT-9", desc: "HEXAGONAL BOLT", type: "SPAREPART", uom: "10 EA", dangerous: "NO", shelf: "NO", mfr: "MFR2", doc: "", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" }
+            ]
         },
-        preConfirm: () => {
-            const body = document.getElementById('email-body').value;
-            navigator.clipboard.writeText(body);
-            return 'copied';
+        {
+            ticketNo: "492019", 
+            status: "Created", // Terkunci (Read-Only)
+            request: "EXISTING PN", 
+            requester: "Budi Santoso", 
+            dept: "TCP-12",
+            pns: [
+                { pn: "VALVE-OIL-4", desc: "PRESSURE VALVE", type: "EQUIPMENT", uom: "1 EA", dangerous: "NO", shelf: "NO", mfr: "BOSCH", doc: "SPEC_VALVE.PDF", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" }
+            ]
         }
-    }).then((result) => {
-        if (result.isConfirmed) {
+    ];
+
+    // 2. STYLING STATUS
+    function getStatusStyle(status) {
+        if (status === 'Received') return 'background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;';
+        if (status === 'Under Evaluation') return 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;';
+        if (status === 'Created') return 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;';
+        return 'background: #f1f5f9; color: #475569;';
+    }
+
+    // 3. RENDER TABEL
+    function renderTable() {
+        const tbody = document.getElementById('tbody-pn');
+        tbody.innerHTML = ''; 
+
+        ticketData.forEach((row, index) => {
+            const pnListHTML = row.pns.map(p => `<span class="pn-badge">${p.pn}</span>`).join('');
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td style="text-align:center;">
+                    <button class="action-btn drop-trigger" data-index="${index}">
+                        <i class="ph ph-dots-three-outline-vertical"></i>
+                    </button>
+                </td>
+                <td style="font-weight: 700; color: var(--primary);">${row.ticketNo}</td>
+                <td style="cursor: pointer;" class="btn-status" data-index="${index}" title="Click to Change Status">
+                    <span class="status-badge" style="${getStatusStyle(row.status)}">
+                        ${row.status} <i class="ph ph-pencil-simple" style="font-size:0.7rem;"></i>
+                    </span>
+                </td>
+                <td><span class="status-badge badge-gray">${row.request}</span></td>
+                <td>${row.requester}</td>
+                <td><div class="pn-list">${pnListHTML}</div></td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+    renderTable();
+
+    // 4. DROPDOWN DAN ACTIONS
+    const globalDropdown = document.getElementById('global-dropdown');
+    let activeDropdownIndex = null;
+
+    document.addEventListener('click', () => globalDropdown.classList.remove('show'));
+
+    document.getElementById('tbody-pn').addEventListener('click', (e) => {
+        const trigger = e.target.closest('.drop-trigger');
+        if (trigger) {
+            e.stopPropagation();
+            activeDropdownIndex = trigger.getAttribute('data-index');
+            const rect = trigger.getBoundingClientRect();
+            
+            globalDropdown.style.top = `${rect.bottom + 5}px`;
+            globalDropdown.style.left = `${rect.left}px`;
+
+            // TAMPILAN LABEL MENU: 'Created' = View Detail (Read-Only), lainnya = Edit Ticket
+            const currentStatus = ticketData[activeDropdownIndex].status;
+            const detailLabel = document.getElementById('dd-detail');
+            if (currentStatus === 'Created') {
+                detailLabel.innerHTML = `<i class="ph ph-eye"></i> View Detail (Read-Only)`;
+            } else {
+                detailLabel.innerHTML = `<i class="ph ph-pencil-simple"></i> Edit Ticket PNs`;
+            }
+
+            globalDropdown.classList.add('show');
+            return;
+        }
+
+        // KLIK UBAH STATUS
+        const btnStatus = e.target.closest('.btn-status');
+        if (btnStatus) {
+            const idx = btnStatus.getAttribute('data-index');
             Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'success',
-                title: 'Email body copied to clipboard!',
-                showConfirmButton: false,
-                timer: 2000,
-                background: 'var(--bg-card)',
-                color: 'var(--text-main)'
+                title: `Change Status: ${ticketData[idx].ticketNo}`,
+                input: 'select',
+                inputOptions: { 
+                    'Received': 'Received', 
+                    'Under Evaluation': 'Under Evaluation', 
+                    'Created': 'Created' 
+                },
+                inputValue: ticketData[idx].status,
+                showCancelButton: true,
+                confirmButtonText: 'Update Status',
+                confirmButtonColor: 'var(--primary)',
+                background: 'var(--bg-card)', color: 'var(--text-main)'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    ticketData[idx].status = res.value; 
+                    renderTable(); 
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Status set to ${res.value}`, showConfirmButton: false, timer: 1500 });
+                }
             });
         }
+    });
+
+    // EVENT LISTENER BUKA NOTIFIKASI EMAIL OUTLOOK
+    document.getElementById('dd-notif').addEventListener('click', () => {
+        const ticket = ticketData[activeDropdownIndex];
+        openNotifModal(ticket);
+    });
+
+    // 5. DETAIL VIEW / EDIT MODAL
+    document.getElementById('dd-detail').addEventListener('click', () => {
+        const ticket = ticketData[activeDropdownIndex];
+        
+        // HANYA 'Created' YANG READ-ONLY; 'Received' & 'Under Evaluation' BISA DIEDIT
+        const isReadOnly = (ticket.status === 'Created');
+
+        openEntryModal({
+            title: !isReadOnly 
+                ? `<i class="ph ph-note-pencil"></i> Edit Ticket (${ticket.status}): ${ticket.ticketNo}` 
+                : `<i class="ph ph-file-text"></i> Ticket Details (Created): ${ticket.ticketNo}`,
+            headerData: { 
+                ticketNo: ticket.ticketNo, 
+                requester: ticket.requester, 
+                department: ticket.dept 
+            },
+            initialData: ticket.pns,
+            isReadOnly: isReadOnly,
+            
+            // Simpan perubahan ke ticketData jika dalam mode edit
+            onSubmit: (updatedPns) => {
+                ticket.pns = updatedPns;
+                renderTable();
+            }
+        });
+    });
+
+    // 6. DELETE TIKET
+    document.getElementById('dd-delete').addEventListener('click', () => {
+        Swal.fire({
+            title: 'Delete Ticket?',
+            text: `Hapus tiket ${ticketData[activeDropdownIndex].ticketNo}?`,
+            icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444',
+            background: 'var(--bg-card)', color: 'var(--text-main)'
+        }).then((res) => {
+            if (res.isConfirmed) {
+                ticketData.splice(activeDropdownIndex, 1);
+                renderTable();
+            }
+        });
+    });
+
+    // 7. INPUT TIKET BARU
+    document.getElementById('btn-add-pn').addEventListener('click', () => {
+        const randomTicket = Math.floor(100000 + Math.random() * 900000).toString();
+
+        openEntryModal({
+            title: '<i class="ph ph-hard-drives"></i> Create New PN Ticket',
+            headerData: { ticketNo: randomTicket, requester: 'Muhammad Rizki F', department: 'TCP-10' },
+            initialData: [],
+            isReadOnly: false,
+            onSubmit: (arrayOfPns, header) => {
+                const newTicket = {
+                    ticketNo: header.ticketNo,
+                    status: "Received", // Awal tiket masuk sebagai Received (Editable)
+                    request: "EXISTING PN",
+                    requester: header.requester,
+                    dept: header.department,
+                    pns: arrayOfPns
+                };
+                ticketData.unshift(newTicket);
+                renderTable();
+            }
+        });
     });
 }

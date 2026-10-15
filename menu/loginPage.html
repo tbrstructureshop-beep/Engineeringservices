@@ -1,112 +1,421 @@
-// File: menu/modal/logOut.js
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login & Register - GMF Engineering Services</title>
 
-export function openUserModal(userData = {}) {
-    const user = {
-        name: userData.name || "Muhammad Rizki F",
-        initials: userData.initials || "MR",
-        empId: userData.empId || "584920",
-        unit: userData.unit || "TCP-10 (Engineering Support)",
-        role: userData.role || "Requester",
-        ...userData
-    };
+    <!-- Google Font: Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons (SVG Premium) -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    const htmlContent = `
-        <style>
-            .user-detail-card {
-                display: flex; flex-direction: column; align-items: center; padding: 10px 0; text-align: center;
-            }
-            .profile-avatar-large {
-                width: 72px; height: 72px; border-radius: 50%;
-                background: linear-gradient(135deg, var(--primary), #3b82f6);
-                color: #ffffff; display: flex; align-items: center; justify-content: center;
-                font-size: 1.75rem; font-weight: 700; margin-bottom: 12px;
-                box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
-            }
-            .user-badge-role {
-                display: inline-block; padding: 3px 10px; border-radius: 20px;
-                background: #dbeafe; color: var(--primary); font-size: 0.75rem; font-weight: 600; margin-top: 4px;
-            }
-            .info-list {
-                width: 100%; margin-top: 20px; background: var(--bg-main);
-                border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; text-align: left;
-            }
-            .info-row {
-                display: flex; justify-content: space-between; align-items: center;
-                padding: 12px 16px; border-bottom: 1px solid var(--border-color); font-size: 0.85rem;
-            }
-            .info-row:last-child { border-bottom: none; }
-            .info-label { color: var(--text-muted); display: flex; align-items: center; gap: 8px; font-weight: 500; }
-            .info-value { color: var(--text-main); font-weight: 600; text-align: right; }
-        </style>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --font-family: 'Inter', sans-serif;
+        }
 
-        <div class="user-detail-card">
-            <div class="profile-avatar-large">${user.initials}</div>
-            <h3 style="font-size: 1.15rem; color: var(--text-main); margin-bottom: 2px;">${user.name}</h3>
-            <span class="user-badge-role">${user.role}</span>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
 
-            <div class="info-list">
-                <div class="info-row">
-                    <span class="info-label"><i class="ph ph-user"></i> Nama</span>
-                    <span class="info-value">${user.name}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label"><i class="ph ph-identification-card"></i> Employee ID No.</span>
-                    <span class="info-value">${user.empId}</span>
-                </div>
-                <div class="info-row">
-                    <span class="info-label"><i class="ph ph-buildings"></i> Unit</span>
-                    <span class="info-value">${user.unit}</span>
+        body {
+            font-family: var(--font-family);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Background menggunakan assets/background.png */
+            background: linear-gradient(rgba(10, 25, 47, 0.65), rgba(15, 23, 42, 0.8)),
+                        url('../assets/background.png') center/cover no-repeat fixed;
+            padding: 20px;
+        }
+
+        /* Glassmorphism Card */
+        .auth-card {
+            width: 100%;
+            max-width: 440px;
+            background: rgba(255, 255, 255, 0.12);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 16px;
+            padding: 32px 28px;
+            color: #ffffff;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header Logo */
+        .brand-header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .brand-logo-icon {
+            width: 52px;
+            height: 52px;
+            border-radius: 12px;
+            background: rgba(37, 99, 235, 0.85);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: #ffffff;
+            margin-bottom: 10px;
+            box-shadow: 0 8px 16px rgba(37, 99, 235, 0.3);
+        }
+        .brand-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+        }
+        .brand-subtitle {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.75);
+            margin-top: 4px;
+        }
+
+        /* Switch Tabs (Login / Register) */
+        .auth-tabs {
+            display: flex;
+            background: rgba(0, 0, 0, 0.25);
+            border-radius: 10px;
+            padding: 4px;
+            margin-bottom: 22px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 9px;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 600;
+            font-size: 0.85rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .tab-btn.active {
+            background: rgba(255, 255, 255, 0.95);
+            color: #0f172a;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Form Inputs */
+        .form-group {
+            margin-bottom: 16px;
+            text-align: left;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: rgba(255, 255, 255, 0.85);
+            letter-spacing: 0.5px;
+        }
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-wrapper i.field-icon {
+            position: absolute;
+            left: 14px;
+            font-size: 1.15rem;
+            color: rgba(255, 255, 255, 0.6);
+            pointer-events: none;
+        }
+        .auth-input {
+            width: 100%;
+            height: 44px;
+            padding: 0 42px 0 42px;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 8px;
+            outline: none;
+            color: #ffffff;
+            font-size: 0.9rem;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+        .auth-input:focus {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.25);
+        }
+        .auth-input::placeholder {
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Password Peek Button */
+        .btn-peek {
+            position: absolute;
+            right: 12px;
+            background: none;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 4px;
+            border-radius: 4px;
+            transition: color 0.2s;
+        }
+        .btn-peek:hover {
+            color: #ffffff;
+        }
+
+        select.auth-input option {
+            background: #0f172a;
+            color: #ffffff;
+        }
+
+        /* Submit Button */
+        .btn-auth-submit {
+            width: 100%;
+            height: 45px;
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+        }
+        .btn-auth-submit:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .auth-form { display: none; }
+        .auth-form.active { display: block; }
+    </style>
+</head>
+<body>
+
+    <div class="auth-card">
+        <!-- Logo & Title -->
+        <div class="brand-header">
+            <div class="brand-logo-icon">
+                <i class="ph-fill ph-airplane-tilt"></i>
+            </div>
+            <h1 class="brand-title">GMF Engineering Services</h1>
+            <p class="brand-subtitle">SAP Material Management & Tracking System</p>
+        </div>
+
+        <!-- Switch Tab -->
+        <div class="auth-tabs">
+            <button type="button" class="tab-btn active" id="tab-login">
+                <i class="ph ph-sign-in"></i> Sign In
+            </button>
+            <button type="button" class="tab-btn" id="tab-register">
+                <i class="ph ph-user-plus"></i> Register
+            </button>
+        </div>
+
+        <!-- ================= FORM 1: LOGIN ================= -->
+        <form id="form-login" class="auth-form active">
+            <div class="form-group">
+                <label class="form-label">Employee ID No.</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-identification-card field-icon"></i>
+                    <input type="text" id="login-empid" class="auth-input" placeholder="e.g. 584920" required value="584920">
                 </div>
             </div>
-        </div>
-    `;
 
-    Swal.fire({
-        title: `<span style="font-size: 1.1rem; color: var(--text-main);"><i class="ph ph-user-circle"></i> User Profile</span>`,
-        html: htmlContent,
-        width: '420px',
-        background: 'var(--bg-card)',
-        color: 'var(--text-main)',
-        showCancelButton: true,
-        showConfirmButton: true,
-        confirmButtonText: '<i class="ph ph-sign-out"></i> Log out',
-        confirmButtonColor: '#ef4444',
-        cancelButtonText: '<i class="ph ph-x"></i> Close',
-        cancelButtonColor: '#64748b',
-        reverseButtons: true,
-        focusConfirm: false
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Konfirmasi Log Out',
-                text: 'Apakah Anda yakin ingin keluar dari sistem?',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: 'Ya, Keluar',
-                cancelButtonText: 'Batal',
-                background: 'var(--bg-card)',
-                color: 'var(--text-main)'
-            }).then((logoutRes) => {
-                if (logoutRes.isConfirmed) {
-                    // Hapus session user yang aktif
-                    localStorage.removeItem('currentUser');
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-lock-key field-icon"></i>
+                    <input type="password" id="login-password" class="auth-input" placeholder="Enter your password" required value="password123">
+                    <button type="button" class="btn-peek" data-target="login-password" title="Toggle password visibility">
+                        <i class="ph ph-eye"></i>
+                    </button>
+                </div>
+            </div>
 
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Logged Out',
-                        text: 'Mengarahkan ke halaman login...',
-                        timer: 1200,
-                        showConfirmButton: false,
-                        background: 'var(--bg-card)',
-                        color: 'var(--text-main)'
-                    }).then(() => {
-                        // Redirect otomatis ke menu/loginPage.html
-                        window.location.href = 'menu/loginPage.html';
-                    });
+            <button type="submit" class="btn-auth-submit">
+                <i class="ph ph-sign-in"></i> Log In to Dashboard
+            </button>
+        </form>
+
+        <!-- ================= FORM 2: REGISTER ================= -->
+        <form id="form-register" class="auth-form">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-user field-icon"></i>
+                    <input type="text" id="reg-name" class="auth-input" placeholder="e.g. Muhammad Rizki F" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Employee ID No.</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-identification-card field-icon"></i>
+                    <input type="text" id="reg-empid" class="auth-input" placeholder="e.g. 584920" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Unit / Department</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-buildings field-icon"></i>
+                    <input type="text" id="reg-unit" class="auth-input" placeholder="e.g. TCP-10 (Engineering Support)" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Role</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-briefcase field-icon"></i>
+                    <select id="reg-role" class="auth-input" style="padding-left: 42px;">
+                        <option value="Requester">Requester</option>
+                        <option value="Admin TED-2">Admin TED-2 (Engineering Support)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div class="input-wrapper">
+                    <i class="ph ph-lock-key field-icon"></i>
+                    <input type="password" id="reg-password" class="auth-input" placeholder="Create password" required>
+                    <button type="button" class="btn-peek" data-target="reg-password">
+                        <i class="ph ph-eye"></i>
+                    </button>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-auth-submit" style="background:#10b981;">
+                <i class="ph ph-check-circle"></i> Create Account
+            </button>
+        </form>
+    </div>
+
+    <script>
+        // Tab Switcher
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const formLogin = document.getElementById('form-login');
+        const formRegister = document.getElementById('form-register');
+
+        tabLogin.addEventListener('click', () => {
+            tabLogin.classList.add('active');
+            tabRegister.classList.remove('active');
+            formLogin.classList.add('active');
+            formRegister.classList.remove('active');
+        });
+
+        tabRegister.addEventListener('click', () => {
+            tabRegister.classList.add('active');
+            tabLogin.classList.remove('active');
+            formRegister.classList.add('active');
+            formLogin.classList.remove('active');
+        });
+
+        // Peek Ability (Show / Hide Password)
+        document.querySelectorAll('.btn-peek').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetId = btn.getAttribute('data-target');
+                const input = document.getElementById(targetId);
+                const icon = btn.querySelector('i');
+
+                if (input.type === 'password') {
+                    input.type = 'text';
+                    icon.classList.replace('ph-eye', 'ph-eye-slash');
+                } else {
+                    input.type = 'password';
+                    icon.classList.replace('ph-eye-slash', 'ph-eye');
                 }
             });
-        }
-    });
-}
+        });
+
+        // Handle Login
+        formLogin.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const empId = document.getElementById('login-empid').value.trim();
+
+            // Cek apakah ada data register sebelumnya di localStorage
+            const storedUser = JSON.parse(localStorage.getItem('registeredUsers_' + empId));
+
+            const userData = storedUser || {
+                name: "Muhammad Rizki F",
+                initials: "MR",
+                empId: empId,
+                unit: "TCP-10 (Engineering Support)",
+                role: "Requester"
+            };
+
+            // Simpan session aktif
+            localStorage.setItem('currentUser', JSON.stringify(userData));
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Login Berhasil!',
+                text: `Selamat datang, ${userData.name}`,
+                timer: 1200,
+                showConfirmButton: false,
+                background: '#0f172a',
+                color: '#fff'
+            }).then(() => {
+                // Arahkan ke dashboard utama
+                window.location.href = '../index.html';
+            });
+        });
+
+        // Handle Register
+        formRegister.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = document.getElementById('reg-name').value.trim();
+            const empId = document.getElementById('reg-empid').value.trim();
+            const unit = document.getElementById('reg-unit').value.trim();
+            const role = document.getElementById('reg-role').value;
+
+            // Generate Inisial (contoh: Muhammad Rizki -> MR)
+            const initials = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || "US";
+
+            const newUser = { name, empId, unit, role, initials };
+
+            // Simpan user baru
+            localStorage.setItem('registeredUsers_' + empId, JSON.stringify(newUser));
+            localStorage.setItem('currentUser', JSON.stringify(newUser));
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Registrasi Berhasil!',
+                text: 'Akun Anda berhasil didaftarkan.',
+                timer: 1500,
+                showConfirmButton: false,
+                background: '#0f172a',
+                color: '#fff'
+            }).then(() => {
+                window.location.href = '../index.html';
+            });
+        });
+    </script>
+</body>
+</html>

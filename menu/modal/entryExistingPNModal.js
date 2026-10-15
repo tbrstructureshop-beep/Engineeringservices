@@ -54,7 +54,9 @@ export function openEntryModal(config) {
             <div>
                 <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Status Mode</div>
                 <div style="font-weight: 700; font-size: 0.85rem;">
-                    ${isReadOnly ? '<span style="color:#eab308;"><i class="ph ph-lock"></i> READ ONLY (LOCKED)</span>' : '<span style="color:#10b981;"><i class="ph ph-pencil-line"></i> EDITABLE</span>'}
+                    ${isReadOnly 
+                        ? '<span style="color:#eab308;"><i class="ph ph-lock"></i> READ ONLY (CREATED)</span>' 
+                        : '<span style="color:#10b981;"><i class="ph ph-pencil-line"></i> EDITABLE</span>'}
                 </div>
             </div>
         </div>
@@ -98,11 +100,11 @@ export function openEntryModal(config) {
                         <i class="ph ph-plus-circle"></i> Add Row
                     </button>
                     <span style="font-size: 0.8rem; color: var(--text-muted); background: var(--bg-main); padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border-color);">
-                        <i class="ph ph-info"></i> Edit enabled: bulk paste, copy, cut, & delete available.
+                        <i class="ph ph-info"></i> Edit Mode: Drag-select, Bulk Delete, Copy (Ctrl+C), Cut (Ctrl+X), & Smart Paste aktif.
                     </span>
                 ` : `
                     <span style="font-size: 0.8rem; color: var(--text-muted); background: var(--bg-main); padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border-color);">
-                        <i class="ph ph-lock-key"></i> Mode View Detail (Data hanya bisa diubah ketika status tiket 'Created').
+                        <i class="ph ph-lock-key"></i> Mode View Detail: Data terkunci (Read-Only) karena tiket sudah berstatus 'Created'. Klik ikon file di kolom Document untuk mengunduh lampiran.
                     </span>
                 `}
             </div>
@@ -126,7 +128,6 @@ export function openEntryModal(config) {
             const filePicker = document.getElementById('cell-file-picker');
             let activeFileInputTarget = null;
 
-            // FUNGSI MEMBUAT BARIS (Bisa menerima data lama untuk Detail/Edit)
             function addRow(data = null) {
                 const tr = document.createElement('tr');
                 tr.className = 'pn-row';
@@ -172,7 +173,6 @@ export function openEntryModal(config) {
                     <td><input type="text" class="excel-input input-reg" value="${val('reg')}" ${roAttr}></td>
                 `;
 
-                // Simpan referensi file objek asli jika ada
                 if (data && data.docFile) {
                     tr.querySelector('.input-doc')._attachedFile = data.docFile;
                 }
@@ -181,11 +181,10 @@ export function openEntryModal(config) {
                 return tr;
             }
 
-            // POPULATE DATA
             if (initialData.length > 0) {
                 initialData.forEach(item => addRow(item));
             } else {
-                addRow(); // Tambah 1 baris kosong jika mode Create baru
+                addRow();
             }
 
             if (!isReadOnly) {
@@ -204,7 +203,7 @@ export function openEntryModal(config) {
                 });
             }
 
-            // EVENT KLIK PADA KOLOM DOCUMENT (UPLOAD vs DOWNLOAD/VIEW)
+            // KLIK TOMBOL DOKUMEN (UPLOAD PADA EDIT, DOWNLOAD PADA READ-ONLY)
             tbody.addEventListener('click', (e) => {
                 const actionBtn = e.target.closest('.btn-doc-action');
                 if (!actionBtn) return;
@@ -214,7 +213,6 @@ export function openEntryModal(config) {
                 const attachedFile = docInput._attachedFile;
 
                 if (isReadOnly) {
-                    // MODE READ ONLY: Download/Buka file
                     if (attachedFile instanceof File || attachedFile instanceof Blob) {
                         const url = URL.createObjectURL(attachedFile);
                         const a = document.createElement('a');
@@ -230,7 +228,6 @@ export function openEntryModal(config) {
                         Swal.showValidationMessage('Tidak ada file lampiran pada baris ini.');
                     }
                 } else {
-                    // MODE EDIT/CREATE: Upload file baru
                     activeFileInputTarget = docInput;
                     filePicker.value = '';
                     filePicker.click();
@@ -246,7 +243,7 @@ export function openEntryModal(config) {
                 }
             });
 
-            // FITUR EXCEL HANYA AKTIF JIKA TIDAK READ ONLY
+            // FITUR EXCEL GRID (Hanya aktif jika Editable)
             if (!isReadOnly) {
                 let isSelecting = false;
                 let startCell = null;
@@ -340,7 +337,6 @@ export function openEntryModal(config) {
                     }
                 });
 
-                // Smart Paste Handler
                 tbody.addEventListener('paste', (e) => {
                     const targetInput = e.target.closest('.excel-input');
                     if (!targetInput) return;
@@ -394,7 +390,7 @@ export function openEntryModal(config) {
             }
         },
         preConfirm: () => {
-            if (isReadOnly) return true; // Tidak perlu membaca data jika hanya view
+            if (isReadOnly) return true;
 
             const rows = document.querySelectorAll('.pn-row');
             const dataPns = [];

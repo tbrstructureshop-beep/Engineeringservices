@@ -1,5 +1,7 @@
 // File: menu/existingPartNumber.js
-import { openEntryModal } from './entryModal.js';
+
+// Perhatikan path import baru ini
+import { openEntryModal } from './modal/entryModal.js'; 
 
 export function render(container) {
     container.innerHTML = `
@@ -19,9 +21,9 @@ export function render(container) {
                 <table class="data-table" id="table-pn">
                     <thead>
                         <tr>
-                            <!-- Tambah Kolom ACTION di awal -->
                             <th rowspan="2" style="border-right: 2px solid var(--border-color); text-align:center;">Action</th>
-                            
+                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Ticket No</th>
+                            <th rowspan="2" style="border-right: 1px solid var(--border-color);">Status</th>
                             <th rowspan="2" style="border-right: 1px solid var(--border-color);">Request</th>
                             <th rowspan="2" style="border-right: 1px solid var(--border-color);">Dangerous Good</th>
                             <th rowspan="2" style="border-right: 1px solid var(--border-color);">Shelf Life</th>
@@ -72,15 +74,24 @@ export function render(container) {
         </div>
     `;
 
-    // DATA STATE
+    // DATA STATE (Mockup dengan Tiket dan Status)
     let pnData = [
         {
+            ticket: "TKT-202610-001", status: "Received", // <--- FITUR TIKET & STATUS
             request: "EXISTING PN", dangerous: "NO", shelf: "NO", requester: "Muhammad Rizki F",
             no: "1", type: "TOOLS", desc: "FREEZER", uom: "2 EA", pn: "CF1633N",
             mfr: "", doc: "", unserv_plant: "", unserv_loc: "", ref_plant: "", ref_iss: "",
             ref_rec: "", parent_shop: "", parent_plant: "", serv_loc: "", ac_type: "", pur_grp: "", reg: ""
         }
     ];
+
+    // FUNGSI WARNA STATUS DINAMIS
+    function getStatusStyle(status) {
+        if (status === 'Received') return 'background: #dbeafe; color: #1e40af;'; // Biru
+        if (status === 'Evaluated') return 'background: #fef08a; color: #854d0e;'; // Kuning
+        if (status === 'Approved') return 'background: #dcfce7; color: #166534;'; // Hijau
+        return 'background: #f1f5f9; color: #475569;'; // Default abu
+    }
 
     // FUNGSI RENDER TABLE
     function renderTable() {
@@ -90,14 +101,20 @@ export function render(container) {
         pnData.forEach((row, index) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <!-- Tombol Hapus (Action) -->
                 <td style="border-right: 2px solid var(--border-color); text-align:center;">
                     <button class="btn-delete" data-index="${index}" style="background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;" title="Delete Data">
                         <i class="ph ph-trash"></i>
                     </button>
                 </td>
                 
-                <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-green">${row.request}</span></td>
+                <td style="border-right: 1px solid var(--border-color); font-weight: 600;">${row.ticket}</td>
+                
+                <!-- STATUS YANG BISA DI KLIK -->
+                <td style="border-right: 1px solid var(--border-color); text-align: center; cursor: pointer;" class="btn-status" data-index="${index}" title="Click to Change Status">
+                    <span class="status-badge" style="${getStatusStyle(row.status)}">${row.status} <i class="ph ph-pencil-simple" style="font-size:0.7rem;"></i></span>
+                </td>
+
+                <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-gray">${row.request}</span></td>
                 <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-gray">${row.dangerous}</span></td>
                 <td style="border-right: 1px solid var(--border-color);"><span class="status-badge badge-gray">${row.shelf}</span></td>
                 <td style="border-right: 1px solid var(--border-color);">${row.requester}</td>
@@ -126,43 +143,66 @@ export function render(container) {
     }
     renderTable();
 
-    // LOGIKA HAPUS DATA (Event Delegation)
+    // EVENT DELEGATION (Klik Hapus dan Klik Ubah Status)
     document.getElementById('tbody-pn').addEventListener('click', (e) => {
+        // --- 1. HANDLE HAPUS ---
         const btnDelete = e.target.closest('.btn-delete');
         if (btnDelete) {
             const index = btnDelete.getAttribute('data-index');
-            
-            // Konfirmasi Hapus via SweetAlert
             Swal.fire({
                 title: 'Hapus Data?',
-                text: `Anda yakin ingin menghapus material ${pnData[index].desc}?`,
+                text: `Hapus material ${pnData[index].desc}?`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#64748b',
-                confirmButtonText: 'Ya, Hapus',
-                background: 'var(--bg-card)',
-                color: 'var(--text-main)'
+                background: 'var(--bg-card)', color: 'var(--text-main)'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    pnData.splice(index, 1); // Hapus array berdasarkan index
-                    renderTable(); // Update Tabel
-                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Data Terhapus', showConfirmButton: false, timer: 1500 });
+                    pnData.splice(index, 1);
+                    renderTable();
+                }
+            });
+            return; // Selesai
+        }
+
+        // --- 2. HANDLE UBAH STATUS TIKET (KHUSUS ADMIN) ---
+        const btnStatus = e.target.closest('.btn-status');
+        if (btnStatus) {
+            const index = btnStatus.getAttribute('data-index');
+            Swal.fire({
+                title: 'Update Ticket Status',
+                text: `Nomor Tiket: ${pnData[index].ticket}`,
+                input: 'select',
+                inputOptions: {
+                    'Received': 'Received',
+                    'Evaluated': 'Evaluated',
+                    'Approved': 'Approved'
+                },
+                inputValue: pnData[index].status,
+                showCancelButton: true,
+                confirmButtonText: 'Update Status',
+                confirmButtonColor: 'var(--primary)',
+                background: 'var(--bg-card)', color: 'var(--text-main)'
+            }).then((res) => {
+                if (res.isConfirmed) {
+                    pnData[index].status = res.value; // Timpa status lama
+                    renderTable(); // Render ulang warna
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Status Updated', showConfirmButton: false, timer: 1500 });
                 }
             });
         }
     });
 
-    // LOGIKA INPUT MODAL (Grouped by Sections)
+    // LOGIKA INPUT MODAL DENGAN MEMORI TIKET
     document.getElementById('btn-add-pn').addEventListener('click', () => {
-        
-        // Definisikan kolom dan pecah menjadi Section/Grup
         const formConfig = {
             title: '<i class="ph ph-hard-drives"></i> Tambah Data Existing PN',
             sections: [
                 {
                     title: '1. General Information',
                     fields: [
+                        // preserveOnLoop: true -> Value ini tidak direset saat Add Another dicentang!
+                        { id: 'ticket_no', label: 'Ticket Number', type: 'text', placeholder: 'TKT-YYYYMM-XXX', uppercase: true, required: true, preserveOnLoop: true },
                         { id: 'dangerous_good', label: 'Dangerous Good', type: 'select', options: ['NO', 'YES'], required: true },
                         { id: 'shelf_life', label: 'Shelf Life', type: 'select', options: ['NO', 'YES'], required: true },
                     ]
@@ -170,10 +210,10 @@ export function render(container) {
                 {
                     title: '2. Material Codes & Desc',
                     fields: [
-                        { id: 'matl_type', label: 'Matl Type (MATL_TYPE)', type: 'select', options: ['TOOLS', 'CONSUMABLE', 'SPAREPART'], required: true },
-                        { id: 'matl_desc', label: 'Material Desc (MATL_DESC)', type: 'text', placeholder: 'e.g. FREEZER', uppercase: true, required: true },
-                        { id: 'base_oum', label: 'Base Unit (BASE_OUM)', type: 'text', placeholder: 'e.g. 2 EA', uppercase: true, required: true },
-                        { id: 'manu_mat', label: 'Manufacturer PN (MANU_MAT)', type: 'text', placeholder: 'e.g. CF1633N', uppercase: true, required: true },
+                        { id: 'matl_type', label: 'Matl Type', type: 'select', options: ['TOOLS', 'CONSUMABLE', 'SPAREPART'], required: true },
+                        { id: 'matl_desc', label: 'Material Desc', type: 'text', uppercase: true, required: true },
+                        { id: 'base_oum', label: 'Base Unit (UoM)', type: 'text', uppercase: true, required: true },
+                        { id: 'manu_mat', label: 'Manufacturer PN', type: 'text', uppercase: true, required: true },
                         { id: 'mfr_no', label: 'MFR NO (CAGE CODE)', type: 'text', uppercase: true },
                         { id: 'document', label: 'Document Number', type: 'text', uppercase: true },
                     ]
@@ -191,17 +231,19 @@ export function render(container) {
                 {
                     title: '4. Additional Details',
                     fields: [
-                        { id: 'zzrarbpl', label: 'Parent Shop (ZZRARBPL)', type: 'text', uppercase: true },
+                        { id: 'zzrarbpl', label: 'Parent Shop', type: 'text', uppercase: true },
                         { id: 'zzpwerks', label: 'Parent Shop Plant', type: 'text', uppercase: true },
                         { id: 'zzslgort', label: 'Serviceable St. Loc', type: 'text', uppercase: true },
-                        { id: 'zzeqart', label: 'A/C Type (ZZEQART)', type: 'text', uppercase: true },
+                        { id: 'zzeqart', label: 'A/C Type', type: 'text', uppercase: true },
                         { id: 'ekgrp', label: 'Purchasing Group', type: 'text', uppercase: true },
-                        { id: 'reg', label: 'Aircraft Reg (Reg)', type: 'text', uppercase: true }
+                        { id: 'reg', label: 'Aircraft Reg', type: 'text', uppercase: true }
                     ]
                 }
             ],
             onSubmit: (formData) => {
                 const newEntry = {
+                    ticket: formData.ticket_no,      // TIKET BARU / TIKET YANG DI-LOOP
+                    status: "Received",              // Status default waktu disubmit
                     request: "EXISTING PN", requester: "Muhammad Rizki F", no: (pnData.length + 1).toString(),
                     dangerous: formData.dangerous_good, shelf: formData.shelf_life,
                     type: formData.matl_type, desc: formData.matl_desc, uom: formData.base_oum,
@@ -216,7 +258,6 @@ export function render(container) {
             }
         };
 
-        // Panggil Dynamic Modal dengan config baru
         openEntryModal(formConfig);
     });
 }

@@ -2,18 +2,15 @@
 import { openEntryModal } from './modal/entryExistingPNModal.js'; 
 
 export function render(container) {
-    // 1. INJEKSI HTML & CSS
     container.innerHTML = `
         <style>
-            /* DROPDOWN MELAYANG DI ATAS TABLE */
             .action-dropdown { position: relative; display: inline-block; }
             .action-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); transition: 0.2s; padding: 4px; border-radius: 4px;}
             .action-btn:hover { background: var(--bg-main); color: var(--primary); }
             
-            /* Class .dropdown-content-fixed akan dipakai JS untuk floating */
             .dropdown-content-fixed {
-                display: none; position: fixed; /* KUNCI UTAMA: Fixed Position */
-                background-color: var(--bg-card); min-width: 140px;
+                display: none; position: fixed;
+                background-color: var(--bg-card); min-width: 170px;
                 box-shadow: 0px 4px 15px rgba(0,0,0,0.15); z-index: 9999;
                 border-radius: 8px; border: 1px solid var(--border-color);
                 flex-direction: column; text-align: left;
@@ -26,7 +23,6 @@ export function render(container) {
             .dropdown-item.text-red { color: #ef4444; }
             .dropdown-item.text-red:hover { background-color: #fef2f2; }
             
-            /* Penataan Badge Multi PN di tabel */
             .pn-list { display: flex; flex-wrap: wrap; gap: 6px; }
             .pn-badge { background: var(--bg-main); border: 1px solid var(--border-color); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; color: var(--text-main); }
         </style>
@@ -43,7 +39,6 @@ export function render(container) {
 
         <div class="card">
             <h3 class="card-title"><i class="ph ph-table"></i> Dashboard Tiket SAP</h3>
-            <!-- Wrapper Table -->
             <div class="table-responsive">
                 <table class="data-table" id="table-pn" style="min-width: 100%;">
                     <thead>
@@ -61,40 +56,51 @@ export function render(container) {
             </div>
         </div>
         
-        <!-- ELEMENT GLOBAL UNTUK DROPDOWN MELAYANG -->
         <div id="global-dropdown" class="dropdown-content-fixed">
-            <div class="dropdown-item btn-detail" id="dd-detail"><i class="ph ph-eye"></i> Detail PNs</div>
+            <div class="dropdown-item btn-detail" id="dd-detail"><i class="ph ph-eye"></i> View Detail / Edit</div>
             <div class="dropdown-item text-red btn-delete" id="dd-delete"><i class="ph ph-trash"></i> Delete Ticket</div>
         </div>
     `;
 
-    // 2. STATE DATA (STRUKTUR BARU: 1 TIKET -> BANYAK PN)
+    // 1. DATA SEEDING DENGAN 3 STATUS SPESIFIK
     let ticketData = [
         {
-            ticketNo: "492018", status: "Received", request: "EXISTING PN", 
-            requester: "Muhammad Rizki F", dept: "TCP-10",
-            // Array menampung banyak list PN dalam 1 tiket
+            ticketNo: "492018", 
+            status: "Received", 
+            request: "EXISTING PN", 
+            requester: "Muhammad Rizki F", 
+            dept: "TCP-10",
             pns: [
-                { pn: "CF1633N", desc: "FREEZER", type: "TOOLS", uom: "2 EA", dangerous: "NO", shelf: "NO", mfr: "MFR1", doc: "", uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" },
-                { pn: "HEX-BOLT-9", desc: "HEXAGONAL BOLT", type: "SPAREPART", uom: "10 EA", dangerous: "NO", shelf: "NO", mfr: "MFR2", doc: "", uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" }
+                { pn: "CF1633N", desc: "FREEZER", type: "TOOLS", uom: "2 EA", dangerous: "NO", shelf: "NO", mfr: "MFR1", doc: "MANUAL_CF1633N.PDF", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" },
+                { pn: "HEX-BOLT-9", desc: "HEXAGONAL BOLT", type: "SPAREPART", uom: "10 EA", dangerous: "NO", shelf: "NO", mfr: "MFR2", doc: "", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" }
+            ]
+        },
+        {
+            ticketNo: "492019", 
+            status: "Created", 
+            request: "EXISTING PN", 
+            requester: "Budi Santoso", 
+            dept: "TCP-12",
+            pns: [
+                { pn: "VALVE-OIL-4", desc: "PRESSURE VALVE", type: "EQUIPMENT", uom: "1 EA", dangerous: "NO", shelf: "NO", mfr: "BOSCH", doc: "SPEC_VALVE.PDF", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" }
             ]
         }
     ];
 
+    // 2. STYLING STATUS: Received, Under Evaluation, Created
     function getStatusStyle(status) {
-        if (status === 'Received') return 'background: #dbeafe; color: #1e40af;';
-        if (status === 'Evaluated') return 'background: #fef08a; color: #854d0e;';
-        if (status === 'Approved') return 'background: #dcfce7; color: #166534;';
+        if (status === 'Received') return 'background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;';
+        if (status === 'Under Evaluation') return 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;';
+        if (status === 'Created') return 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;';
         return 'background: #f1f5f9; color: #475569;';
     }
 
-    // 3. RENDER TABEL UTAMA
+    // 3. RENDER TABEL
     function renderTable() {
         const tbody = document.getElementById('tbody-pn');
         tbody.innerHTML = ''; 
 
         ticketData.forEach((row, index) => {
-            // Mapping Array PNs menjadi List Badge HTML
             const pnListHTML = row.pns.map(p => `<span class="pn-badge">${p.pn}</span>`).join('');
 
             const tr = document.createElement('tr');
@@ -105,8 +111,10 @@ export function render(container) {
                     </button>
                 </td>
                 <td style="font-weight: 700; color: var(--primary);">${row.ticketNo}</td>
-                <td style="cursor: pointer;" class="btn-status" data-index="${index}" title="Change Status">
-                    <span class="status-badge" style="${getStatusStyle(row.status)}">${row.status} <i class="ph ph-pencil-simple" style="font-size:0.7rem;"></i></span>
+                <td style="cursor: pointer;" class="btn-status" data-index="${index}" title="Click to Change Status">
+                    <span class="status-badge" style="${getStatusStyle(row.status)}">
+                        ${row.status} <i class="ph ph-pencil-simple" style="font-size:0.7rem;"></i>
+                    </span>
                 </td>
                 <td><span class="status-badge badge-gray">${row.request}</span></td>
                 <td>${row.requester}</td>
@@ -117,40 +125,47 @@ export function render(container) {
     }
     renderTable();
 
-    // 4. LOGIKA DROPDOWN MELAYANG (DI ATAS TABEL) & ACTIONS
+    // 4. DROPDOWN DAN ACTIONS
     const globalDropdown = document.getElementById('global-dropdown');
     let activeDropdownIndex = null;
 
-    // Tutup dropdown jika klik di luar
-    document.addEventListener('click', () => {
-        globalDropdown.classList.remove('show');
-    });
+    document.addEventListener('click', () => globalDropdown.classList.remove('show'));
 
     document.getElementById('tbody-pn').addEventListener('click', (e) => {
-        // --- KLIK TITIK TIGA ---
         const trigger = e.target.closest('.drop-trigger');
         if (trigger) {
-            e.stopPropagation(); // Cegah event menutup otomatis
+            e.stopPropagation();
             activeDropdownIndex = trigger.getAttribute('data-index');
-            
-            // Dapatkan kordinat tombol persis di layar
             const rect = trigger.getBoundingClientRect();
             
-            // Atur posisi menu melayang tepat di bawah kordinat tombol
             globalDropdown.style.top = `${rect.bottom + 5}px`;
             globalDropdown.style.left = `${rect.left}px`;
+
+            // Dinamis mengubah label dropdown sesuai status
+            const currentStatus = ticketData[activeDropdownIndex].status;
+            const detailLabel = document.getElementById('dd-detail');
+            if (currentStatus === 'Created') {
+                detailLabel.innerHTML = `<i class="ph ph-pencil-simple"></i> Edit Ticket PNs`;
+            } else {
+                detailLabel.innerHTML = `<i class="ph ph-eye"></i> View Detail (Read-Only)`;
+            }
+
             globalDropdown.classList.add('show');
             return;
         }
 
-        // --- KLIK UBAH STATUS ---
+        // KLIK UBAH STATUS
         const btnStatus = e.target.closest('.btn-status');
         if (btnStatus) {
             const idx = btnStatus.getAttribute('data-index');
             Swal.fire({
-                title: `Status Ticket: ${ticketData[idx].ticketNo}`,
+                title: `Change Status: ${ticketData[idx].ticketNo}`,
                 input: 'select',
-                inputOptions: { 'Received': 'Received', 'Evaluated': 'Evaluated', 'Approved': 'Approved' },
+                inputOptions: { 
+                    'Received': 'Received', 
+                    'Under Evaluation': 'Under Evaluation', 
+                    'Created': 'Created' 
+                },
                 inputValue: ticketData[idx].status,
                 showCancelButton: true,
                 confirmButtonText: 'Update Status',
@@ -160,46 +175,40 @@ export function render(container) {
                 if (res.isConfirmed) {
                     ticketData[idx].status = res.value; 
                     renderTable(); 
-                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Status Updated', showConfirmButton: false, timer: 1500 });
+                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Status set to ${res.value}`, showConfirmButton: false, timer: 1500 });
                 }
             });
         }
     });
 
-    // --- KLIK MENU DALAM DROPDOWN (DETAIL & DELETE) ---
+    // 5. VIEW DETAIL / EDIT DENGAN MEMBUKA MODAL YANG SAMA
     document.getElementById('dd-detail').addEventListener('click', () => {
-        const data = ticketData[activeDropdownIndex];
-        
-        // Buat tabel HTML Rincian Multi PN
-        let tableHTML = `
-            <div style="overflow-x: auto; max-height: 50vh; font-size: 0.8rem;">
-                <table class="data-table" style="min-width: 1500px;">
-                    <thead style="background: var(--bg-main);">
-                        <tr><th>PN</th><th>DESC</th><th>TYPE</th><th>UoM</th><th>DG</th><th>Shelf</th><th>MFR</th><th>A/C</th><th>Plant</th></tr>
-                    </thead>
-                    <tbody>
-        `;
-        data.pns.forEach(p => {
-            tableHTML += `<tr>
-                <td><b>${p.pn}</b></td><td>${p.desc}</td><td>${p.type}</td><td>${p.uom}</td>
-                <td>${p.dangerous}</td><td>${p.shelf}</td><td>${p.mfr}</td><td>${p.ac}</td><td>${p.uplant}</td>
-            </tr>`;
-        });
-        tableHTML += `</tbody></table></div>`;
+        const ticket = ticketData[activeDropdownIndex];
+        const isCreated = (ticket.status === 'Created');
 
-        Swal.fire({
-            title: `Detail Tiket ${data.ticketNo}`,
-            html: tableHTML,
-            width: '90vw',
-            background: 'var(--bg-card)', color: 'var(--text-main)',
-            confirmButtonColor: 'var(--primary)'
+        openEntryModal({
+            title: isCreated ? `<i class="ph ph-note-pencil"></i> Edit Ticket: ${ticket.ticketNo}` : `<i class="ph ph-file-text"></i> Ticket Details: ${ticket.ticketNo}`,
+            headerData: { 
+                ticketNo: ticket.ticketNo, 
+                requester: ticket.requester, 
+                department: ticket.dept 
+            },
+            initialData: ticket.pns, // Masukkan data PN tiket saat ini
+            isReadOnly: !isCreated,  // Jika status BUKAN 'Created', maka terkunci (Read Only)
+            
+            // Ketika user menyimpan perubahan pada status 'Created'
+            onSubmit: (updatedPns) => {
+                ticket.pns = updatedPns;
+                renderTable();
+            }
         });
     });
 
+    // 6. DELETE TIKET
     document.getElementById('dd-delete').addEventListener('click', () => {
         Swal.fire({
             title: 'Delete Ticket?',
-            text: `Hapus tiket ${ticketData[activeDropdownIndex].ticketNo} beserta seluruh PN di dalamnya?`,
+            text: `Hapus tiket ${ticketData[activeDropdownIndex].ticketNo}?`,
             icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444',
             background: 'var(--bg-card)', color: 'var(--text-main)'
         }).then((res) => {
@@ -210,32 +219,27 @@ export function render(container) {
         });
     });
 
-    // 5. MUNCULKAN MODAL INPUT TIKET
+    // 7. INPUT NEW DATA (CREATE)
     document.getElementById('btn-add-pn').addEventListener('click', () => {
-        // Generate 6 digit angka
         const randomTicket = Math.floor(100000 + Math.random() * 900000).toString();
 
-        const formConfig = {
+        openEntryModal({
             title: '<i class="ph ph-hard-drives"></i> Create New PN Ticket',
             headerData: { ticketNo: randomTicket, requester: 'Muhammad Rizki F', department: 'TCP-10' },
-            
-            // Ketika "Submit Ticket" di klik di dalam modal
+            initialData: [], // Kosong untuk input baru
+            isReadOnly: false, // Bebas edit
             onSubmit: (arrayOfPns, header) => {
                 const newTicket = {
                     ticketNo: header.ticketNo,
-                    status: "Received",
+                    status: "Received", // Default status awal
                     request: "EXISTING PN",
                     requester: header.requester,
                     dept: header.department,
-                    pns: arrayOfPns // Kumpulan PN dari table modal
+                    pns: arrayOfPns
                 };
-                
-                // Masukkan tiket baru dan render ulang tabel utama
                 ticketData.unshift(newTicket);
                 renderTable();
             }
-        };
-
-        openEntryModal(formConfig);
+        });
     });
 }

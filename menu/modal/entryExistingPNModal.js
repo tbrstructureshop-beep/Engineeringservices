@@ -29,12 +29,6 @@ export function openEntryModal(config) {
             .excel-table td.selected-cell { background-color: rgba(59, 130, 246, 0.2) !important; }
             .excel-table td.selected-cell input { background-color: transparent !important; color: transparent; text-shadow: 0 0 0 var(--text-main); }
 
-            .btn-doc-action {
-                position: absolute; right: 5px; background: none; border: none; 
-                color: var(--primary); font-size: 1.15rem; cursor: pointer; 
-                display: flex; align-items: center; justify-content: center;
-                padding: 4px; border-radius: 4px; transition: 0.2s;
-            }
             .btn-doc-action:hover { background: var(--bg-main); color: #2563eb; }
 
             /* Wrapper cell Dokumen: Flexbox rapi, teks & tombol tidak akan tumpuk */

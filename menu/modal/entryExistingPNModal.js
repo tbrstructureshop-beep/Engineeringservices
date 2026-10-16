@@ -89,6 +89,13 @@ export function openEntryModal(config) {
                         : '<span style="color:#10b981;"><i class="ph ph-pencil-line"></i> EDITABLE</span>'}
                 </div>
             </div>
+            <div>
+                <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Timeline</div>
+                <div style="font-size: 0.8rem; color: var(--text-main); line-height: 1.3;">
+                    <div>Sub: <b>${config.headerData.createdAt ? new Date(config.headerData.createdAt).toLocaleDateString('id-ID') : 'Baru'}</b></div>
+                    ${config.headerData.closedAt ? `<div style="color:#10b981;">Closed: <b>${new Date(config.headerData.closedAt).toLocaleDateString('id-ID')}</b></div>` : ''}
+                </div>
+            </div>
         </div>
 
         <div style="margin-top: 15px; overflow-x: auto; max-height: 55vh; border: 1px solid var(--border-color); border-radius: 4px;">

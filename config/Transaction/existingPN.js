@@ -168,10 +168,11 @@ export async function fetchAllTickets() {
     }));
 }
 
-/**
- * Simpan Tiket Baru (Header, File GDrive, & Detail Material)
- */
+// File: config/Transaction/existingPN.js -> pada fungsi createTicketWithItems
+
 export async function createTicketWithItems(header, arrayOfPns) {
+    console.log('1. Memulai simpan header tiket:', header);
+
     // 1. Simpan Header Tiket
     const { error: headerErr } = await supabase
         .from('existing_pn_tickets')
@@ -184,7 +185,12 @@ export async function createTicketWithItems(header, arrayOfPns) {
             department: header.department
         }]);
 
-    if (headerErr) throw headerErr;
+    if (headerErr) {
+        console.error('Gagal simpan header tiket ke Supabase:', headerErr);
+        throw new Error('Supabase Header Error: ' + headerErr.message);
+    }
+
+    console.log('2. Header tiket berhasil disimpan. Memproses items & GDrive...');
 
     // 2. Loop upload lampiran ke Google Drive & susun data baris
     const rowsToInsert = [];
@@ -196,10 +202,17 @@ export async function createTicketWithItems(header, arrayOfPns) {
 
         // Jika user melampirkan file fisik di baris ini
         if (item.docFile instanceof File || item.docFile instanceof Blob) {
-            const uploaded = await uploadToGDrive(item.docFile);
-            if (uploaded) {
-                fileId = uploaded.fileId;
-                fileUrl = uploaded.viewUrl;
+            console.log(`Mengunggah file baris ${i + 1} ke Google Drive:`, item.docFile.name);
+            try {
+                const uploaded = await uploadToGDrive(item.docFile);
+                if (uploaded) {
+                    fileId = uploaded.fileId;
+                    fileUrl = uploaded.viewUrl;
+                    console.log('Upload GDrive berhasil:', uploaded);
+                }
+            } catch (gdriveErr) {
+                console.error('Error Google Apps Script:', gdriveErr);
+                throw new Error('Google Drive Error: ' + gdriveErr.message);
             }
         }
 
@@ -209,34 +222,41 @@ export async function createTicketWithItems(header, arrayOfPns) {
             request_label: item.request || 'EXISTING PN',
             dangerous_good: item.dangerous || 'NO',
             shelf_life: item.shelf || 'NO',
-            matl_type: item.type,
+            matl_type: item.type || '',
             matl_desc: item.desc,
-            base_uom: item.uom,
+            base_uom: item.uom || '',
             manu_mat_pn: item.pn,
-            mfr_no: item.mfr,
+            mfr_no: item.mfr || '',
             document_no: item.doc || (item.docFile ? item.docFile.name.toUpperCase() : null),
             gdrive_file_id: fileId,
             gdrive_file_url: fileUrl,
-            zzuwerks: item.uplant,
-            zzulgort: item.uloc,
-            zzrwerks: item.rplant,
-            zzrilgort: item.riss,
-            zzrrlgort: item.rrec,
-            zzrarbpl: item.pshop,
-            zzpwerks: item.pplant,
-            zzslgort: item.sloc,
-            zzeqart: item.ac,
-            ekgrp: item.pur,
-            aircraft_reg: item.reg
+            zzuwerks: item.uplant || '',
+            zzulgort: item.uloc || '',
+            zzrwerks: item.rplant || '',
+            zzrilgort: item.riss || '',
+            zzrrlgort: item.rrec || '',
+            zzrarbpl: item.pshop || '',
+            zzpwerks: item.pplant || '',
+            zzslgort: item.sloc || '',
+            zzeqart: item.ac || '',
+            ekgrp: item.pur || '',
+            aircraft_reg: item.reg || ''
         });
     }
+
+    console.log('3. Menyimpan baris items ke Supabase:', rowsToInsert);
 
     // 3. Insert ke database Supabase
     const { error: itemsErr } = await supabase
         .from('existing_pn_items')
         .insert(rowsToInsert);
 
-    if (itemsErr) throw itemsErr;
+    if (itemsErr) {
+        console.error('Gagal simpan baris items ke Supabase:', itemsErr);
+        throw new Error('Supabase Items Error: ' + itemsErr.message);
+    }
+
+    console.log('4. Semua proses penyimpanan selesai 100%!');
     return true;
 }
 

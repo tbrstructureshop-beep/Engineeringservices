@@ -1,6 +1,4 @@
 // File: menu/modal/entryExistingPNModal.js
-import { openCommentModal } from './commentExistingPN.js';
-import { getUnreadCommentCount } from '../../config/Transaction/commentExistingPN.js';
 
 export function openEntryModal(config) {
     const isReadOnly = config.isReadOnly || false;
@@ -121,16 +119,6 @@ export function openEntryModal(config) {
                     ${config.headerData.closedAt ? `<div style="color:#10b981;">Closed: <b>${new Date(config.headerData.closedAt).toLocaleDateString('id-ID')}</b></div>` : ''}
                 </div>
             </div>
-            
-            ${initialData.length > 0 || isReadOnly ? `
-            <div>
-                <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Discussion</div>
-                <button type="button" id="btn-open-comments" style="position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.2s;">
-                    <i class="ph ph-chats-circle" style="font-size: 1.1rem; color: var(--primary);"></i> See Comments
-                    <span id="badge-comment-unread" style="display: none; position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 10px; font-size: 0.68rem; padding: 2px 6px; font-weight: 700; box-shadow: 0 2px 5px rgba(239, 68, 68, 0.4);">0</span>
-                </button>
-            </div>
-            ` : ''}
         </div>
 
         <div style="margin-top: 15px; overflow-x: auto; max-height: 55vh; border: 1px solid var(--border-color); border-radius: 4px;">

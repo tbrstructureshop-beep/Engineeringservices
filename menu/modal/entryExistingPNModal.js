@@ -1,3 +1,6 @@
+// File: menu/modal/entryExistingPNModal.js (bagian paling atas)
+import { openCommentModal } from './commentExistingPN.js';
+import { getUnreadCommentCount } from '../../config/Transaction/commentExistingPN.js';
 // File: menu/modal/entryExistingPNModal.js
 
 export function openEntryModal(config) {
@@ -119,6 +122,22 @@ export function openEntryModal(config) {
                     ${config.headerData.closedAt ? `<div style="color:#10b981;">Closed: <b>${new Date(config.headerData.closedAt).toLocaleDateString('id-ID')}</b></div>` : ''}
                 </div>
             </div>
+            <div>
+                <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Timeline</div>
+                <div style="font-size: 0.8rem; color: var(--text-main); line-height: 1.3;">
+                    <div>Sub: <b>${config.headerData.createdAt ? new Date(config.headerData.createdAt).toLocaleDateString('id-ID') : 'Baru'}</b></div>
+                    ${config.headerData.closedAt ? `<div style="color:#10b981;">Closed: <b>${new Date(config.headerData.closedAt).toLocaleDateString('id-ID')}</b></div>` : ''}
+                </div>
+            </div>
+
+            <!-- TOMBOL LIHAT DISKUSI & NOTIFIKASI KOMENTAR BARU -->
+            <div>
+                <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Discussion</div>
+                <button type="button" id="btn-open-comments" style="position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.2s;">
+                    <i class="ph ph-chats-circle" style="font-size: 1.1rem; color: var(--primary);"></i> See Comments
+                    <span id="badge-comment-unread" style="display: none; position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 10px; font-size: 0.68rem; padding: 2px 6px; font-weight: 700; box-shadow: 0 2px 5px rgba(239, 68, 68, 0.4);">0</span>
+                </button>
+            </div>
         </div>
 
         <div style="margin-top: 15px; overflow-x: auto; max-height: 55vh; border: 1px solid var(--border-color); border-radius: 4px;">
@@ -187,6 +206,42 @@ export function openEntryModal(config) {
             const tbody = document.getElementById('modal-tbody');
             const filePicker = document.getElementById('cell-file-picker');
             let activeFileInputTarget = null;
+            let activeUser = { name: 'User', role: 'Requester', unit: '-', empId: '' };
+            try {
+                const stored = localStorage.getItem('currentUser');
+                if (stored) activeUser = JSON.parse(stored);
+            } catch (e) {}
+
+            const btnComments = document.getElementById('btn-open-comments');
+            const badgeUnread = document.getElementById('badge-comment-unread');
+
+            // Cek jumlah komentar yang belum dibaca
+            async function checkUnreadComments() {
+                if (!config.headerData.ticketNo) return;
+                const unreadCount = await getUnreadCommentCount(config.headerData.ticketNo, activeUser.role, activeUser.unit);
+                if (unreadCount > 0 && badgeUnread) {
+                    badgeUnread.textContent = unreadCount;
+                    badgeUnread.style.display = 'inline-block';
+                } else if (badgeUnread) {
+                    badgeUnread.style.display = 'none';
+                }
+            }
+            checkUnreadComments();
+
+            // Klik Tombol See Comments
+            if (btnComments) {
+                btnComments.addEventListener('click', () => {
+                    openCommentModal({
+                        ticketNo: config.headerData.ticketNo,
+                        currentUser: activeUser,
+                        onCommentAdded: () => {
+                            checkUnreadComments();
+                        }
+                    });
+                    // Hilangkan badge seketika saat tombol diklik (karena sudah dibaca)
+                    if (badgeUnread) badgeUnread.style.display = 'none';
+                });
+            }
 
             // Helper render tombol dokumen dengan link Google Drive tertanam
             function getDocButtonsHTML(hasDocFile, fileUrl = '') {

@@ -287,6 +287,7 @@
             const navItems = document.querySelectorAll('.nav-item');
             const menuToggle = document.getElementById('menu-toggle');
             const sidebar = document.getElementById('sidebar');
+            const sidebarOverlay = document.getElementById('sidebar-overlay');
             const themeToggle = document.getElementById('theme-toggle');
             const themeIcon = themeToggle.querySelector('i');
             const userProfileBtn = document.getElementById('user-profile-btn');
@@ -299,13 +300,24 @@
             }
 
             // --- 2. LOGIKA TOGGLE SIDEBAR (DRAWER) ---
-            menuToggle.addEventListener('click', () => {
+            function toggleSidebar() {
                 if (window.innerWidth <= 768) {
                     sidebar.classList.toggle('open');
+                    if (sidebarOverlay) sidebarOverlay.classList.toggle('show');
                 } else {
                     sidebar.classList.toggle('collapsed');
                 }
-            });
+            }
+
+            menuToggle.addEventListener('click', toggleSidebar);
+
+            // Tutup menu jika area gelap (overlay) diklik
+            if (sidebarOverlay) {
+                sidebarOverlay.addEventListener('click', () => {
+                    sidebar.classList.remove('open');
+                    sidebarOverlay.classList.remove('show');
+                });
+            }
 
             // --- 3. LOGIKA DARK MODE ---
             let isDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -366,7 +378,11 @@
                     
                     loadMenu(menuName, menuTitle);
                     
-                    if (window.innerWidth <= 768) sidebar.classList.remove('open');
+                    // Saat menu diklik, tutup sidebar jika di HP
+                    if (window.innerWidth <= 768) {
+                        sidebar.classList.remove('open');
+                        if (sidebarOverlay) sidebarOverlay.classList.remove('show');
+                    }
                 });
             });
 

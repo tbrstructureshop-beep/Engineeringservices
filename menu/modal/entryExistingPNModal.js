@@ -36,6 +36,36 @@ export function openEntryModal(config) {
                 padding: 4px; border-radius: 4px; transition: 0.2s;
             }
             .btn-doc-action:hover { background: var(--bg-main); color: #2563eb; }
+
+            /* Ganti / sesuaikan bagian .btn-doc-action */
+            .doc-actions-container {
+                position: absolute; 
+                right: 5px; 
+                top: 50%; 
+                transform: translateY(-50%);
+                display: flex; 
+                align-items: center; 
+                gap: 3px; 
+                z-index: 3;
+            }
+            
+            .btn-doc-action {
+                background: none; 
+                border: none; 
+                color: var(--primary); 
+                font-size: 1.1rem; 
+                cursor: pointer; 
+                display: inline-flex; 
+                align-items: center; 
+                justify-content: center;
+                padding: 3px; 
+                border-radius: 4px; 
+                transition: 0.2s;
+            }
+            .btn-doc-action:hover { 
+                background: var(--bg-main); 
+                color: #1d4ed8; 
+            }
         </style>
 
         <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 10px; font-size: 0.85rem; text-align: left;">
@@ -128,7 +158,35 @@ export function openEntryModal(config) {
             const filePicker = document.getElementById('cell-file-picker');
             let activeFileInputTarget = null;
 
-            // File: menu/modal/entryExistingPNModal.js
+            // Helper render tombol dokumen (View / Replace / Upload)
+            function getDocButtonsHTML(hasDocFile) {
+                if (isReadOnly) {
+                    return hasDocFile ? `
+                        <button type="button" class="btn-doc-action btn-doc-view" tabindex="-1" title="Lihat / Download File">
+                            <i class="ph ph-eye"></i>
+                        </button>` : '';
+                }
+
+                // MODE EDIT:
+                if (hasDocFile) {
+                    return `
+                        <button type="button" class="btn-doc-action btn-doc-view" tabindex="-1" title="Lihat File Sebelumnya">
+                            <i class="ph ph-eye"></i>
+                        </button>
+                        <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Ganti / Upload Ulang File">
+                            <i class="ph ph-arrows-clockwise"></i>
+                        </button>
+                    `;
+                }
+
+                // Jika belum ada dokumen sama sekali:
+                return `
+                    <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Upload File">
+                        <i class="ph ph-upload-simple"></i>
+                    </button>
+                `;
+            }
+
             function addRow(data = null) {
                 const tr = document.createElement('tr');
                 tr.className = 'pn-row';
@@ -146,7 +204,7 @@ export function openEntryModal(config) {
                 const shelfVal = (data && data.shelf !== undefined) ? data.shelf : 'NO';
             
                 const docVal = val('doc');
-                const hasFile = data && data.docFile;
+                const hasFile = Boolean(docVal || (data && data.docFile));
             
                 tr.innerHTML = `
                     <td style="position: sticky; left: 0; background: var(--bg-card); z-index: 2; text-align:center; border-right: 1px solid var(--border-color);">
@@ -165,10 +223,10 @@ export function openEntryModal(config) {
                     <td><input type="text" class="excel-input input-mfr" value="${val('mfr')}" ${roAttr}></td>
                     <td>
                         <div style="position: relative; display: flex; align-items: center; width: 100%;">
-                            <input type="text" class="excel-input input-doc" placeholder="DOC / UPLOAD" value="${docVal}" style="padding-right: 32px;" ${roAttr}>
-                            <button type="button" class="btn-doc-action" tabindex="-1" title="${isReadOnly ? 'Download/View Attached File' : 'Upload or Replace File'}">
-                                <i class="ph ${isReadOnly || hasFile ? 'ph-file-arrow-down' : 'ph-upload-simple'}"></i>
-                            </button>
+                            <input type="text" class="excel-input input-doc" placeholder="DOC / UPLOAD" value="${docVal}" style="padding-right: 58px;" ${roAttr}>
+                            <div class="doc-actions-container" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 3px; z-index: 3;">
+                                ${getDocButtonsHTML(hasFile)}
+                            </div>
                         </div>
                     </td>
                     <td><input type="text" class="excel-input input-uplant" value="${val('uplant')}" ${roAttr}></td>
@@ -214,34 +272,40 @@ export function openEntryModal(config) {
                 });
             }
 
-            // KLIK TOMBOL DOKUMEN (UPLOAD PADA EDIT, DOWNLOAD PADA READ-ONLY)
+            // KLIK TOMBOL DOKUMEN: PREVIEW / LIHAT vs UPLOAD / REPLACE
             tbody.addEventListener('click', (e) => {
-                const actionBtn = e.target.closest('.btn-doc-action');
-                if (!actionBtn) return;
-
-                const row = actionBtn.closest('tr');
-                const docInput = row.querySelector('.input-doc');
-                const attachedFile = docInput._attachedFile;
-
-                if (isReadOnly) {
+                const viewBtn = e.target.closest('.btn-doc-view');
+                const uploadBtn = e.target.closest('.btn-doc-upload');
+            
+                // 1. AKSI MELIHAT FILE SEBELUMNYA
+                if (viewBtn) {
+                    e.stopPropagation();
+                    const row = viewBtn.closest('tr');
+                    const docInput = row.querySelector('.input-doc');
+                    const attachedFile = docInput._attachedFile;
+            
                     if (attachedFile instanceof File || attachedFile instanceof Blob) {
-                        const url = URL.createObjectURL(attachedFile);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = docInput.value || attachedFile.name;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
+                        // Buka file fisik (PDF / Gambar) di tab baru browser
+                        const fileUrl = URL.createObjectURL(attachedFile);
+                        window.open(fileUrl, '_blank');
+                    } else if (typeof attachedFile === 'string' && (attachedFile.startsWith('http://') || attachedFile.startsWith('https://'))) {
+                        window.open(attachedFile, '_blank');
                     } else if (docInput.value) {
-                        Swal.showValidationMessage(`Document Name: "${docInput.value}" (File fisik tidak tersimpan di memori browser).`);
+                        Swal.showValidationMessage(`File Tercatat: "${docInput.value}" (File fisik belum diunggah ulang pada sesi peramban ini).`);
                     } else {
-                        Swal.showValidationMessage('Tidak ada file lampiran pada baris ini.');
+                        Swal.showValidationMessage('Tidak ada lampiran dokumen di baris ini.');
                     }
-                } else {
-                    activeFileInputTarget = docInput;
+                    return;
+                }
+            
+                // 2. AKSI MENGGANTI ATAU UPLOAD FILE BARU
+                if (uploadBtn) {
+                    e.stopPropagation();
+                    const row = uploadBtn.closest('tr');
+                    activeFileInputTarget = row.querySelector('.input-doc');
                     filePicker.value = '';
                     filePicker.click();
+                    return;
                 }
             });
 
@@ -250,7 +314,20 @@ export function openEntryModal(config) {
                     const file = e.target.files[0];
                     activeFileInputTarget.value = file.name.toUpperCase();
                     activeFileInputTarget._attachedFile = file;
-                    activeFileInputTarget.parentElement.querySelector('.btn-doc-action i').className = 'ph ph-file-arrow-down';
+            
+                    // Otomatis ubah tombol di samping input menjadi tombol View + Replace
+                    const container = activeFileInputTarget.parentElement.querySelector('.doc-actions-container');
+                    if (container) {
+                        container.innerHTML = `
+                            <button type="button" class="btn-doc-action btn-doc-view" tabindex="-1" title="Lihat File Baru">
+                                <i class="ph ph-eye"></i>
+                            </button>
+                            <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Ganti Lagi">
+                                <i class="ph ph-arrows-clockwise"></i>
+                            </button>
+                        `;
+                    }
+                    Swal.resetValidationMessage();
                 }
             });
 

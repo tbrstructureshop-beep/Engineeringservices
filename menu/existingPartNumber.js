@@ -242,20 +242,40 @@ export function render(container) {
     });
 
     // 5. DETAIL VIEW / EDIT MODAL
-    document.getElementById('dd-detail').addEventListener('click', () => {
+    document.getElementById('dd-detail').addEventListener('click', async () => {
         const ticket = ticketData[activeDropdownIndex];
+
+        // --- VALIDASI JUST-IN-TIME (Mencegah Stale Data) ---
+        Swal.fire({ title: 'Memeriksa akses...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: 'var(--bg-card)', color: 'var(--text-main)' });
+        
+        // Tarik status paling update detik ini dari database
+        const { data: freshData, error: fetchErr } = await supabase
+            .from('existing_pn_tickets')
+            .select('status')
+            .eq('ticket_no', ticket.ticketNo)
+            .single();
+            
+        if (!fetchErr && freshData) {
+            ticket.status = freshData.status; // Update data memori lokal
+            renderTable(); // Update badge di background
+        }
+        Swal.close();
+        // ---------------------------------------------------
         
         // --- CEK OTORISASI ROLE ---
         let activeUser = { role: 'Requester', unit: '-' };
         try { const stored = localStorage.getItem('currentUser'); if (stored) activeUser = JSON.parse(stored); } catch (e) {}
         const isTed = (activeUser.role && activeUser.role.toUpperCase().includes('TED')) || (activeUser.unit && activeUser.unit.toUpperCase().includes('TED'));
 
-        // Aturan Read-Only:
-        // 1. Jika status 'Created', SEMUA ORANG hanya bisa Read-Only.
-        // 2. Jika status 'Under Evaluation', NON-TED hanya bisa Read-Only (TED tetap bisa edit).
+        // Aturan Read-Only: Cek menggunakan status yang PALING BARU ditarik
         let isReadOnly = false;
         if (ticket.status === 'Created') isReadOnly = true;
         if (!isTed && ticket.status === 'Under Evaluation') isReadOnly = true;
+
+        if (isReadOnly && !isTed) {
+            // Beritahu user jika ternyata statusnya sudah berubah di device lain
+            Swal.fire({ toast: true, position: 'top-end', icon: 'info', title: `Status tiket saat ini: ${ticket.status}. Dibuka dalam mode Read-Only.`, showConfirmButton: false, timer: 3000 });
+        }
         // --------------------------
 
         openEntryModal({
@@ -306,7 +326,7 @@ export function render(container) {
         });
     });
 
-    // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE
+
     // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE
     document.getElementById('dd-delete').addEventListener('click', () => {
         const ticket = ticketData[activeDropdownIndex];
@@ -357,56 +377,68 @@ export function render(container) {
         });
     });
 
-    // 7. INPUT TIKET BARU (UPLOAD KE GDRIVE + SUPABASE)
-    document.getElementById('btn-add-pn').addEventListener('click', () => {
-        const randomTicket = Math.floor(100000 + Math.random() * 900000).toString();
+    // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE
+    document.getElementById('dd-delete').addEventListener('click', async () => {
+        const ticket = ticketData[activeDropdownIndex];
 
-        // Ambil user aktif dari session localStorage login saat ini
-        let activeUser = { name: 'User', unit: '-', empId: null };
-        try {
-            const stored = localStorage.getItem('currentUser');
-            if (stored) activeUser = JSON.parse(stored);
-        } catch (e) {
-            console.error('User session error:', e);
+        // --- VALIDASI JUST-IN-TIME (Mencegah Stale Data) ---
+        Swal.fire({ title: 'Memeriksa status tiket...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: 'var(--bg-card)', color: 'var(--text-main)' });
+        
+        // Tarik status paling update detik ini
+        const { data: freshData, error: fetchErr } = await supabase
+            .from('existing_pn_tickets')
+            .select('status')
+            .eq('ticket_no', ticket.ticketNo)
+            .single();
+            
+        if (!fetchErr && freshData) {
+            ticket.status = freshData.status;
+            renderTable(); // Update UI background seketika
         }
+        Swal.close();
+        // ---------------------------------------------------
 
-        openEntryModal({
-            title: '<i class="ph ph-hard-drives"></i> Create New PN Ticket',
-            headerData: { 
-                ticketNo: randomTicket, 
-                requester: activeUser.name || 'User', 
-                department: activeUser.unit || '-',
-                empId: activeUser.empId || null
-            },
-            initialData: [],
-            isReadOnly: false,
-            onSubmit: async (arrayOfPns, header) => {
+        // --- CEK OTORISASI ROLE ---
+        let activeUser = { role: 'Requester', unit: '-' };
+        try { const stored = localStorage.getItem('currentUser'); if (stored) activeUser = JSON.parse(stored); } catch (e) {}
+        const isTed = (activeUser.role && activeUser.role.toUpperCase().includes('TED')) || (activeUser.unit && activeUser.unit.toUpperCase().includes('TED'));
+
+        // Cegah hapus jika tiket sudah diproses (Berdasarkan status TERBARU)
+        if (!isTed && (ticket.status === 'Under Evaluation' || ticket.status === 'Created')) {
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Akses Ditolak', 
+                text: `Terjadi pembaruan. Tiket saat ini sudah berstatus '${ticket.status}' dan tidak dapat dihapus oleh Unit Pengaju.`, 
+                background: 'var(--bg-card)', color: 'var(--text-main)' 
+            });
+            return;
+        }
+        // --------------------------
+
+        Swal.fire({
+            title: 'Delete Ticket?',
+            text: `Hapus tiket ${ticket.ticketNo}? Seluruh file lampiran di Google Drive juga akan dihapus.`,
+            icon: 'warning', 
+            showCancelButton: true, 
+            confirmButtonColor: '#ef4444',
+            background: 'var(--bg-card)', color: 'var(--text-main)'
+        }).then(async (res) => {
+            if (res.isConfirmed) {
                 Swal.fire({
-                    title: 'Menyimpan Tiket Baru...',
-                    text: 'Sedang mengunggah file ke Google Drive dan mencatat ke database...',
+                    title: 'Menghapus Tiket...',
+                    text: 'Sedang membersihkan database & file Google Drive...',
                     allowOutsideClick: false,
                     didOpen: () => Swal.showLoading(),
                     background: 'var(--bg-card)', color: 'var(--text-main)'
                 });
 
                 try {
-                    await createTicketWithItems(header, arrayOfPns);
+                    await deleteTicketCompletely(ticket.ticketNo);
                     await loadData();
-                    Swal.fire({ 
-                        icon: 'success', 
-                        title: 'Tiket Berhasil Dibuat!', 
-                        text: `Tiket No. ${header.ticketNo} berhasil disimpan ke database.`, 
-                        background: 'var(--bg-card)', color: 'var(--text-main)', 
-                        timer: 1500, showConfirmButton: false 
-                    });
+                    Swal.fire({ icon: 'success', title: 'Terhapus!', text: 'Tiket berhasil dihapus.', timer: 1500, showConfirmButton: false });
                 } catch (err) {
-                    console.error('Create ticket error:', err);
-                    Swal.fire({ 
-                        icon: 'error', 
-                        title: 'Gagal Menyimpan Tiket', 
-                        text: err.message, 
-                        background: 'var(--bg-card)', color: 'var(--text-main)' 
-                    });
+                    console.error('Delete error:', err);
+                    Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: err.message });
                 }
             }
         });

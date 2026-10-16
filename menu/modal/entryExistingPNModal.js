@@ -287,34 +287,58 @@ export function openEntryModal(config) {
                 const viewBtn = e.target.closest('.btn-doc-view');
                 const uploadBtn = e.target.closest('.btn-doc-upload');
             
-                // 1. AKSI MELIHAT FILE SEBELUMNYA
+                // File: menu/modal/entryExistingPNModal.js (di dalam tbody.addEventListener('click'))
+
+                // 1. AKSI MELIHAT / PREVIEW FILE
                 if (viewBtn) {
                     e.stopPropagation();
                     const row = viewBtn.closest('tr');
                     const docInput = row.querySelector('.input-doc');
                     const attachedFile = docInput._attachedFile;
-            
+    
+                    // KONDISI 1: File fisik lokal baru (baru dipilih dari komputer pada modal ini)
                     if (attachedFile instanceof File || attachedFile instanceof Blob) {
-                        // Buka file fisik (PDF / Gambar) di tab baru browser
                         const fileUrl = URL.createObjectURL(attachedFile);
-                        window.open(fileUrl, '_blank');
-                    } else if (typeof attachedFile === 'string' && (attachedFile.startsWith('http://') || attachedFile.startsWith('https://'))) {
-                        window.open(attachedFile, '_blank');
-                    } else if (docInput.value) {
-                        Swal.showValidationMessage(`File Tercatat: "${docInput.value}" (File fisik belum diunggah ulang pada sesi peramban ini).`);
-                    } else {
-                        Swal.showValidationMessage('Tidak ada lampiran dokumen di baris ini.');
+                        const win = window.open(fileUrl, '_blank');
+                        if (!win) {
+                            // Jika diblokir pop-up blocker browser, beri opsi klik manual
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Preview File Lokal',
+                                html: `Pop-up tab baru diblokir oleh browser Anda.<br><br><a href="${fileUrl}" target="_blank" style="display:inline-block; padding:10px 20px; background:#2563eb; color:white; border-radius:6px; text-decoration:none; font-weight:600;">Klik di Sini untuk Buka File</a>`,
+                                background: 'var(--bg-card)', color: 'var(--text-main)'
+                            });
+                        }
+                        return;
                     }
-                    return;
-                }
-            
-                // 2. AKSI MENGGANTI ATAU UPLOAD FILE BARU
-                if (uploadBtn) {
-                    e.stopPropagation();
-                    const row = uploadBtn.closest('tr');
-                    activeFileInputTarget = row.querySelector('.input-doc');
-                    filePicker.value = '';
-                    filePicker.click();
+    
+                    // KONDISI 2: File sudah ada di Google Drive (membuka link Drive)
+                    if (typeof attachedFile === 'string' && (attachedFile.startsWith('http://') || attachedFile.startsWith('https://'))) {
+                        const win = window.open(attachedFile, '_blank');
+                        if (!win) {
+                            // Jika diblokir pop-up blocker browser, beri opsi klik manual
+                            Swal.fire({
+                                icon: 'info',
+                                title: 'Buka di Google Drive',
+                                html: `Pop-up tab baru diblokir oleh browser Anda.<br><br><a href="${attachedFile}" target="_blank" style="display:inline-block; padding:10px 20px; background:#10b981; color:white; border-radius:6px; text-decoration:none; font-weight:600;"><i class="ph ph-google-drive-logo"></i> Buka File di Google Drive</a>`,
+                                background: 'var(--bg-card)', color: 'var(--text-main)'
+                            });
+                        }
+                        return;
+                    }
+    
+                    // KONDISI 3: Tiket lama yang dibuat sebelum Google Drive dipasang (hanya ada teks nama file)
+                    if (docInput.value) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'File Fisik Belum Tersedia',
+                            html: `Dokumen tercatat sebagai <b>"${docInput.value}"</b>.<br><br>Namun tiket ini belum memiliki file fisik di Google Drive (kemungkinan dibuat sebelum integrasi Drive aktif).<br><br>Jika ingin melampirkan file fisiknya, gunakan tombol ganti (<i class="ph ph-arrows-clockwise"></i>) di sampingnya.`,
+                            background: 'var(--bg-card)', color: 'var(--text-main)'
+                        });
+                        return;
+                    }
+    
+                    Swal.showValidationMessage('Tidak ada lampiran dokumen pada baris ini.');
                     return;
                 }
             });

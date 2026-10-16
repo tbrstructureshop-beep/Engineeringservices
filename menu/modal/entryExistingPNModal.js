@@ -531,16 +531,10 @@ export function openEntryModal(config) {
             }
             return dataPns;
         }
-    }).then((result) => {
+     }).then(async (result) => {
+        // Hanya panggil onSubmit dan serahkan seluruh tampilan loading/sukses/gagal ke handler onSubmit
         if (result.isConfirmed && !isReadOnly && config.onSubmit) {
-            config.onSubmit(result.value, config.headerData);
-            Swal.fire({ 
-                icon: 'success', 
-                title: 'Data Saved!', 
-                text: 'Data tiket berhasil diperbarui.', 
-                background: 'var(--bg-card)', color: 'var(--text-main)', 
-                timer: 1500, showConfirmButton: false 
-            });
+            await config.onSubmit(result.value, config.headerData);
         }
     });
 }

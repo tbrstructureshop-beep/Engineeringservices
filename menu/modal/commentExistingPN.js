@@ -41,11 +41,11 @@ export async function openCommentModal(config) {
             .cmt-close:hover { color: #ef4444; }
             .cmt-list { padding: 15px 20px; max-height: 50vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; background: var(--bg-card); }
             .cmt-item { border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; background: var(--bg-main); }
-            .cmt-item.is-ted { border-left: 4px solid var(--primary); background: #eff6ff; }
+            .cmt-item.is-ted { border-left: 4px solid var(--primary); background: rgba(37, 99, 235, 0.05); }
             .cmt-author { font-weight: 600; font-size: 0.85rem; color: var(--text-main); display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
             .cmt-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 4px; }
-            .cmt-badge.ted { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
-            .cmt-badge.unit { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+            .cmt-badge.ted { background: rgba(37, 99, 235, 0.1); color: var(--primary); border: 1px solid rgba(37, 99, 235, 0.25); }
+            .cmt-badge.unit { background: var(--bg-main); color: var(--text-muted); border: 1px solid var(--border-color); }
             .cmt-date { font-size: 0.72rem; color: var(--text-muted); }
             .cmt-body { font-size: 0.85rem; color: var(--text-main); line-height: 1.4; white-space: pre-wrap; margin-top: 5px; }
             .cmt-input-area { padding: 15px 20px; background: var(--bg-main); border-top: 1px solid var(--border-color); display: flex; flex-direction: column; gap: 10px; }

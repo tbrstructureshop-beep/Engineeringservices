@@ -231,19 +231,35 @@ export function render(container) {
         });
     });
 
-    // 7. INPUT TIKET BARU
+    // File: menu/existingPartNumber.js -> Poin 7
     document.getElementById('btn-add-pn').addEventListener('click', () => {
         const randomTicket = Math.floor(100000 + Math.random() * 900000).toString();
-
+    
+        // 1. Ambil user aktif dari session localStorage login saat ini
+        let activeUser = { name: 'Unknown User', unit: '-' };
+        try {
+            const stored = localStorage.getItem('currentUser');
+            if (stored) {
+                activeUser = JSON.parse(stored);
+            }
+        } catch (e) {
+            console.error("Gagal membaca session user:", e);
+        }
+    
         openEntryModal({
             title: '<i class="ph ph-hard-drives"></i> Create New PN Ticket',
-            headerData: { ticketNo: randomTicket, requester: 'Muhammad Rizki F', department: 'TCP-10' },
-            initialData: [],
+            // 2. Gunakan data user login (name & unit) secara dinamis
+            headerData: { 
+                ticketNo: randomTicket, 
+                requester: activeUser.name || 'User', 
+                department: activeUser.unit || '-' 
+            },
+            initialData: [], // Pastikan selalu array kosong untuk form baru
             isReadOnly: false,
             onSubmit: (arrayOfPns, header) => {
                 const newTicket = {
                     ticketNo: header.ticketNo,
-                    status: "Received", // Awal tiket masuk sebagai Received (Editable)
+                    status: "Received",
                     request: "EXISTING PN",
                     requester: header.requester,
                     dept: header.department,

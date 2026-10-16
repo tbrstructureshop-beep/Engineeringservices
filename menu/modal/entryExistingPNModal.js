@@ -187,22 +187,23 @@ export function openEntryModal(config) {
                 `;
             }
 
+            // File: menu/modal/entryExistingPNModal.js -> di dalam didOpen: () => { ... }
+
             function addRow(data = null) {
                 const tr = document.createElement('tr');
                 tr.className = 'pn-row';
                 const roAttr = isReadOnly ? 'readonly' : '';
                 
-                // Helper untuk mengambil data atau default string kosong
+                // Helper: Ambil data jika ada (mode edit), jika tiket baru (data == null) kosongkan bersih ("")
                 const val = (prop) => (data && data[prop] !== undefined) ? data[prop] : '';
                 
-                // Nomor baris otomatis (1, 2, 3...) jika data.no belum ada
+                // Nomor baris otomatis (1, 2, 3...)
                 const currentRowNo = (data && data.no) ? data.no : (tbody.children.length + 1);
                 
-                // Default nilai siap pakai jika data baru (data == null)
-                const reqVal = (data && data.request !== undefined) ? data.request : 'EXISTING PN';
-                const dgVal  = (data && data.dangerous !== undefined) ? data.dangerous : 'NO';
-                const shelfVal = (data && data.shelf !== undefined) ? data.shelf : 'NO';
-            
+                // Nilai bersih (kosong jika baru)
+                const reqVal = val('request'); 
+                const dgVal  = val('dangerous');
+                const shelfVal = val('shelf');
                 const docVal = val('doc');
                 const hasFile = Boolean(docVal || (data && (data.docFile || data.gdriveUrl)));
                 
@@ -216,14 +217,14 @@ export function openEntryModal(config) {
                     <td><input type="text" class="excel-input input-dg" value="${dgVal}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-shelf" value="${shelfVal}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-no" value="${currentRowNo}" ${roAttr}></td>
-                    <td><input type="text" class="excel-input input-type" placeholder="TOOLS" value="${val('type')}" ${roAttr}></td>
-                    <td><input type="text" class="excel-input input-desc" placeholder="FREEZER" value="${val('desc')}" ${roAttr}></td>
-                    <td><input type="text" class="excel-input input-uom" placeholder="EA" value="${val('uom')}" ${roAttr}></td>
-                    <td><input type="text" class="excel-input input-pn" placeholder="CF1633N" value="${val('pn')}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-type" value="${val('type')}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-desc" value="${val('desc')}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-uom" value="${val('uom')}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-pn" value="${val('pn')}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-mfr" value="${val('mfr')}" ${roAttr}></td>
                     <td>
                         <div style="position: relative; display: flex; align-items: center; width: 100%;">
-                            <input type="text" class="excel-input input-doc" placeholder="DOC / UPLOAD" value="${docVal}" style="padding-right: 58px;" ${roAttr}>
+                            <input type="text" class="excel-input input-doc" value="${docVal}" style="padding-right: 58px;" ${roAttr}>
                             <div class="doc-actions-container" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 3px; z-index: 3;">
                                 ${getDocButtonsHTML(hasFile)}
                             </div>
@@ -243,11 +244,10 @@ export function openEntryModal(config) {
                 `;
             
                 if (data && data.docFile) {
-                tr.querySelector('.input-doc')._attachedFile = data.docFile;
-            } else if (data && data.gdriveUrl) {
-                // Simpan URL Google Drive agar saat tombol mata diklik langsung terbuka
-                tr.querySelector('.input-doc')._attachedFile = data.gdriveUrl;
-            }
+                    tr.querySelector('.input-doc')._attachedFile = data.docFile;
+                } else if (data && data.gdriveUrl) {
+                    tr.querySelector('.input-doc')._attachedFile = data.gdriveUrl;
+                }
             
                 tbody.appendChild(tr);
                 return tr;

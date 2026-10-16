@@ -91,9 +91,53 @@ export function openEntryModal(config) {
                 background: #d1fae5;
                 color: #047857;
             }
+
+            /* --- CSS RESPONSIF MOBILE --- */
+            .modal-header-grid {
+                display: flex;
+                flex-wrap: wrap; /* Kunci agar tidak tumpuk */
+                gap: 15px;
+                background: var(--bg-main);
+                padding: 15px;
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+                margin-top: 10px;
+                font-size: 0.85rem;
+                text-align: left;
+            }
+            /* Setiap item di header (Ticket No, dll) */
+            .modal-header-grid > div {
+                flex: 1 1 calc(16.66% - 15px);
+                min-width: 140px; /* Di HP akan otomatis turun baris jika layarnya sempit */
+            }
+
+            .modal-footer-actions {
+                margin-top: 15px;
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            .footer-left-group {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 10px;
+                align-items: center;
+                width: 100%;
+            }
+            .info-text-badge {
+                font-size: 0.8rem;
+                color: var(--text-muted);
+                background: var(--bg-main);
+                padding: 8px 12px;
+                border-radius: 4px;
+                border: 1px solid var(--border-color);
+                flex: 1;
+                min-width: 250px; /* Teks tidak akan kepenyet */
+                line-height: 1.4;
+            }
         </style>
 
-        <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-main); padding: 15px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 10px; font-size: 0.85rem; text-align: left;">
+        <div class="modal-header-grid">
             <div>
                 <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Ticket No</div>
                 <div style="font-weight: 700; color: var(--primary); font-size: 1.1rem;">${config.headerData.ticketNo}</div>
@@ -109,9 +153,7 @@ export function openEntryModal(config) {
             <div>
                 <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Status Mode</div>
                 <div style="font-weight: 700; font-size: 0.85rem;">
-                    ${isReadOnly 
-                        ? '<span style="color:#eab308;"><i class="ph ph-lock"></i> READ ONLY (CREATED)</span>' 
-                        : '<span style="color:#10b981;"><i class="ph ph-pencil-line"></i> EDITABLE</span>'}
+                    ${isReadOnly ? '<span style="color:#eab308;"><i class="ph ph-lock"></i> READ ONLY (CREATED)</span>' : '<span style="color:#10b981;"><i class="ph ph-pencil-line"></i> EDITABLE</span>'}
                 </div>
             </div>
             <div>
@@ -121,11 +163,10 @@ export function openEntryModal(config) {
                     ${config.headerData.closedAt ? `<div style="color:#10b981;">Closed: <b>${new Date(config.headerData.closedAt).toLocaleDateString('id-ID')}</b></div>` : ''}
                 </div>
             </div>
-
             ${(initialData.length > 0 || isReadOnly) ? `
             <div>
                 <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Discussion</div>
-                <button type="button" id="btn-open-comments" style="position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.2s;">
+                <button type="button" id="btn-open-comments" style="position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: var(--text-main); font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: 0.2s; white-space: nowrap;">
                     <i class="ph ph-chats-circle" style="font-size: 1.1rem; color: var(--primary);"></i> See Comments
                     <span id="badge-comment-unread" style="display: none; position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; border-radius: 10px; font-size: 0.68rem; padding: 2px 6px; font-weight: 700; box-shadow: 0 2px 5px rgba(239, 68, 68, 0.4);">0</span>
                 </button>
@@ -168,17 +209,17 @@ export function openEntryModal(config) {
             </table>
         </div>
         
-        <div style="text-align: left; margin-top: 15px; display: flex; gap: 10px; align-items: center; justify-content: space-between;">
-            <div style="display: flex; gap: 10px; align-items: center;">
+        <div class="modal-footer-actions">
+            <div class="footer-left-group">
                 ${!isReadOnly ? `
-                    <button id="btn-add-row" type="button" class="btn-submit" style="background: #10b981; margin-top:0;">
+                    <button id="btn-add-row" type="button" class="btn-submit" style="background: #10b981; margin-top:0; flex-shrink: 0; white-space: nowrap;">
                         <i class="ph ph-plus-circle"></i> Add Row
                     </button>
-                    <span style="font-size: 0.8rem; color: var(--text-muted); background: var(--bg-main); padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <span class="info-text-badge">
                         <i class="ph ph-info"></i> Edit Mode: Drag-select, Bulk Delete, Copy (Ctrl+C), Cut (Ctrl+X), & Smart Paste aktif.
                     </span>
                 ` : `
-                    <span style="font-size: 0.8rem; color: var(--text-muted); background: var(--bg-main); padding: 5px 10px; border-radius: 4px; border: 1px solid var(--border-color);">
+                    <span class="info-text-badge">
                         <i class="ph ph-lock-key"></i> Mode View Detail: Data terkunci (Read-Only) karena tiket sudah berstatus 'Created'. Klik ikon file di kolom Document untuk mengunduh lampiran.
                     </span>
                 `}

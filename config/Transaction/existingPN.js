@@ -105,6 +105,7 @@ export async function deleteFromGDrive(fileId) {
  * Mengambil semua tiket beserta part numbers dari Supabase
  */
 export async function fetchAllTickets() {
+    // Ganti query select di fetchAllTickets menjadi:
     const { data, error } = await supabase
         .from('existing_pn_tickets')
         .select(`
@@ -115,6 +116,8 @@ export async function fetchAllTickets() {
             requester_name,
             department,
             created_at,
+            updated_at,
+            closed_at,
             existing_pn_items (*)
         `)
         .order('created_at', { ascending: false });
@@ -132,6 +135,9 @@ export async function fetchAllTickets() {
         requester: t.requester_name,
         dept: t.department,
         empId: t.requester_emp_id,
+        createdAt: t.created_at,   // <-- Tambahkan ini
+        updatedAt: t.updated_at,   // <-- Tambahkan ini
+        closedAt: t.closed_at,     // <-- Tambahkan ini
         pns: (t.existing_pn_items || []).sort((a, b) => a.item_no - b.item_no).map(item => ({
             id: item.id,
             no: item.item_no,
@@ -294,7 +300,13 @@ export async function updateTicketAndItems(ticketNo, updatedPns) {
         });
     }
 
-    // 3. Re-sync detail items (Hapus lama lalu masukkan yang baru diperbarui)
+    // 3. Update waktu header tiket agar updated_at tercatat
+    await supabase
+        .from('existing_pn_tickets')
+        .update({ updated_at: new Date().toISOString() })
+        .eq('ticket_no', ticketNo);
+
+    // 4. Re-sync detail items (Hapus lama lalu masukkan yang baru diperbarui)
     await supabase.from('existing_pn_items').delete().eq('ticket_no', ticketNo);
     const { error } = await supabase.from('existing_pn_items').insert(itemsToInsert);
 

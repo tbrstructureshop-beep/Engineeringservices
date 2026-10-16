@@ -37,51 +37,62 @@ export function openEntryModal(config) {
             }
             .btn-doc-action:hover { background: var(--bg-main); color: #2563eb; }
 
-            /* Wadah tombol dokumen: dibuat rapi dengan latar dan pemisah */
+            /* Wrapper cell Dokumen: Flexbox rapi, teks & tombol tidak akan tumpuk */
+            .doc-cell-wrapper {
+                display: flex;
+                align-items: center;
+                width: 100%;
+                height: 40px;
+                padding: 0 8px;
+                gap: 8px;
+                background: transparent;
+            }
+            .doc-cell-wrapper .excel-input {
+                flex: 1;
+                min-width: 0;
+                height: 100%;
+                padding: 0;
+            }
             .doc-actions-container {
-                position: absolute; 
-                right: 4px; 
-                top: 50%; 
-                transform: translateY(-50%);
-                display: flex; 
-                align-items: center; 
-                gap: 4px; 
-                z-index: 5;
-                background: var(--bg-card);
-                padding: 2px 4px;
-                border-radius: 6px;
-                border: 1px solid var(--border-color);
+                display: flex;
+                align-items: center;
+                gap: 6px;
+                flex-shrink: 0;
             }
             
+            /* Tombol Aksi Dokumen (SVG Button Badge) */
             .btn-doc-action {
-                background: none; 
-                border: none; 
-                width: 26px;
-                height: 26px;
-                cursor: pointer; 
-                display: inline-flex; 
-                align-items: center; 
+                width: 30px;
+                height: 30px;
+                border-radius: 6px;
+                border: 1px solid var(--border-color);
+                cursor: pointer;
+                display: inline-flex;
+                align-items: center;
                 justify-content: center;
-                border-radius: 4px; 
-                transition: all 0.2s;
-                font-size: 1.05rem;
+                font-size: 1.15rem;
+                transition: all 0.2s ease;
             }
 
-            /* Tombol View (Biru) */
+            /* Tombol View / External Link (Biru) */
             .btn-doc-view {
                 color: #2563eb;
+                background: #eff6ff;
+                border-color: #bfdbfe;
             }
             .btn-doc-view:hover {
-                background: #eff6ff;
+                background: #dbeafe;
                 color: #1d4ed8;
             }
 
             /* Tombol Upload / Ganti (Hijau Emerald) */
             .btn-doc-upload {
                 color: #059669;
+                background: #ecfdf5;
+                border-color: #a7f3d0;
             }
             .btn-doc-upload:hover {
-                background: #ecfdf5;
+                background: #d1fae5;
                 color: #047857;
             }
         </style>
@@ -183,20 +194,22 @@ export function openEntryModal(config) {
             const filePicker = document.getElementById('cell-file-picker');
             let activeFileInputTarget = null;
 
-            // Helper render tombol dokumen (View / Replace / Upload)
-            function getDocButtonsHTML(hasDocFile) {
+            // Helper render tombol dokumen dengan link Google Drive tertanam
+            function getDocButtonsHTML(hasDocFile, fileUrl = '') {
+                const urlAttr = fileUrl ? `data-url="${fileUrl}"` : '';
+
                 if (isReadOnly) {
                     return hasDocFile ? `
-                        <button type="button" class="btn-doc-action btn-doc-view" tabindex="-1" title="Lihat / Download File">
-                            <i class="ph ph-eye"></i>
+                        <button type="button" class="btn-doc-action btn-doc-view" ${urlAttr} tabindex="-1" title="Buka Dokumen Google Drive">
+                            <i class="ph ph-arrow-square-out"></i>
                         </button>` : '';
                 }
 
                 // MODE EDIT:
                 if (hasDocFile) {
                     return `
-                        <button type="button" class="btn-doc-action btn-doc-view" tabindex="-1" title="Lihat File Sebelumnya">
-                            <i class="ph ph-eye"></i>
+                        <button type="button" class="btn-doc-action btn-doc-view" ${urlAttr} tabindex="-1" title="Buka / Preview Dokumen">
+                            <i class="ph ph-arrow-square-out"></i>
                         </button>
                         <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Ganti / Upload Ulang File">
                             <i class="ph ph-arrows-clockwise"></i>
@@ -204,14 +217,13 @@ export function openEntryModal(config) {
                     `;
                 }
 
-                // Jika belum ada dokumen sama sekali:
+                // Jika belum ada dokumen:
                 return `
-                    <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Upload File">
+                    <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Upload Dokumen ke Google Drive">
                         <i class="ph ph-upload-simple"></i>
                     </button>
                 `;
             }
-
             // File: menu/modal/entryExistingPNModal.js -> di dalam didOpen: () => { ... }
 
             function addRow(data = null) {
@@ -230,7 +242,8 @@ export function openEntryModal(config) {
                 const dgVal  = val('dangerous');
                 const shelfVal = val('shelf');
                 const docVal = val('doc');
-                const hasFile = Boolean(docVal || (data && (data.docFile || data.gdriveUrl)));
+                const gdriveUrl = (data && data.gdriveUrl) ? data.gdriveUrl : '';
+                const hasFile = Boolean(docVal || (data && (data.docFile || gdriveUrl)));
                 
                 tr.innerHTML = `
                     <td style="position: sticky; left: 0; background: var(--bg-card); z-index: 2; text-align:center; border-right: 1px solid var(--border-color);">
@@ -247,11 +260,11 @@ export function openEntryModal(config) {
                     <td><input type="text" class="excel-input input-uom" value="${val('uom')}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-pn" value="${val('pn')}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-mfr" value="${val('mfr')}" ${roAttr}></td>
-                    <td>
-                        <div style="position: relative; display: flex; align-items: center; width: 100%;">
-                            <input type="text" class="excel-input input-doc" value="${docVal}" style="padding-right: 58px;" ${roAttr}>
-                            <div class="doc-actions-container" style="position: absolute; right: 5px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 3px; z-index: 3;">
-                                ${getDocButtonsHTML(hasFile)}
+                    <td style="min-width: 320px;">
+                        <div class="doc-cell-wrapper">
+                            <input type="text" class="excel-input input-doc" placeholder="DOC / UPLOAD" value="${docVal}" ${roAttr}>
+                            <div class="doc-actions-container">
+                                ${getDocButtonsHTML(hasFile, gdriveUrl)}
                             </div>
                         </div>
                     </td>
@@ -305,51 +318,42 @@ export function openEntryModal(config) {
                 const viewBtn = e.target.closest('.btn-doc-view');
                 const uploadBtn = e.target.closest('.btn-doc-upload');
 
-                // 1. AKSI VIEW / LIHAT DOKUMEN
+                // 1. AKSI VIEW / LIHAT DOKUMEN GOOGLE DRIVE
                 if (viewBtn) {
                     e.stopPropagation();
+                    e.preventDefault();
                     const row = viewBtn.closest('tr');
                     const docInput = row.querySelector('.input-doc');
-                    const attachedFile = docInput._attachedFile;
 
-                    let targetUrl = null;
+                    // Ambil target URL langsung dari data-url tombol
+                    let targetUrl = viewBtn.getAttribute('data-url');
 
-                    // A. File fisik lokal yang baru dipilih dari komputer
-                    if (attachedFile instanceof File || attachedFile instanceof Blob) {
-                        targetUrl = URL.createObjectURL(attachedFile);
-                    } 
-                    // B. File Google Drive dari Supabase
-                    else if (typeof attachedFile === 'string' && (attachedFile.startsWith('http://') || attachedFile.startsWith('https://'))) {
-                        targetUrl = attachedFile;
+                    // Fallback jika file fisik baru dipilih di sesi ini (belum save)
+                    if (!targetUrl && docInput._attachedFile instanceof File) {
+                        targetUrl = URL.createObjectURL(docInput._attachedFile);
                     }
 
-                    // Eksekusi buka file di tab baru via virtual anchor tag (Anti Pop-up Blocker & tidak merusak modal)
                     if (targetUrl) {
-                        const a = document.createElement('a');
-                        a.href = targetUrl;
-                        a.target = '_blank';
-                        a.rel = 'noopener noreferrer';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
+                        // Buka langsung di tab baru (Google Drive Preview)
+                        window.open(targetUrl, '_blank');
                         return;
                     }
 
-                    // C. Jika file fisik belum ada (data lama / gdrive_file_url null)
                     if (docInput.value) {
-                        Swal.showValidationMessage(`Dokumen "${docInput.value}" tercatat, tetapi file fisik tidak tersedia di Google Drive. Silakan gunakan ikon ganti file.`);
+                        Swal.showValidationMessage(`File "${docInput.value}" tercatat, tetapi link Google Drive tidak ditemukan.`);
                     } else {
                         Swal.showValidationMessage('Tidak ada lampiran dokumen pada baris ini.');
                     }
                     return;
                 }
 
-                // 2. AKSI UPLOAD / GANTI FILE BARU (SEBELUMNYA HILANG)
+                // 2. AKSI UPLOAD / GANTI FILE
                 if (uploadBtn) {
                     e.stopPropagation();
+                    e.preventDefault();
                     const row = uploadBtn.closest('tr');
                     activeFileInputTarget = row.querySelector('.input-doc');
-                    filePicker.value = ''; // Reset agar bisa memilih file yang sama jika perlu
+                    filePicker.value = '';
                     filePicker.click();
                     return;
                 }
@@ -361,12 +365,13 @@ export function openEntryModal(config) {
                     activeFileInputTarget.value = file.name.toUpperCase();
                     activeFileInputTarget._attachedFile = file;
 
-                    // Update wadah tombol menjadi View (Mata Biru) + Ganti (Panah Putar Hijau)
+                    // Buat link blob lokal sementara untuk langsung bisa dilihat
+                    const tempUrl = URL.createObjectURL(file);
                     const container = activeFileInputTarget.parentElement.querySelector('.doc-actions-container');
                     if (container) {
                         container.innerHTML = `
-                            <button type="button" class="btn-doc-action btn-doc-view" tabindex="-1" title="Lihat Dokumen">
-                                <i class="ph ph-eye"></i>
+                            <button type="button" class="btn-doc-action btn-doc-view" data-url="${tempUrl}" tabindex="-1" title="Preview File Baru">
+                                <i class="ph ph-arrow-square-out"></i>
                             </button>
                             <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Ganti File">
                                 <i class="ph ph-arrows-clockwise"></i>

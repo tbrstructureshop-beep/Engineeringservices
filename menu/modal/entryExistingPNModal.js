@@ -37,34 +37,52 @@ export function openEntryModal(config) {
             }
             .btn-doc-action:hover { background: var(--bg-main); color: #2563eb; }
 
-            /* Ganti / sesuaikan bagian .btn-doc-action */
+            /* Wadah tombol dokumen: dibuat rapi dengan latar dan pemisah */
             .doc-actions-container {
                 position: absolute; 
-                right: 5px; 
+                right: 4px; 
                 top: 50%; 
                 transform: translateY(-50%);
                 display: flex; 
                 align-items: center; 
-                gap: 3px; 
-                z-index: 3;
+                gap: 4px; 
+                z-index: 5;
+                background: var(--bg-card);
+                padding: 2px 4px;
+                border-radius: 6px;
+                border: 1px solid var(--border-color);
             }
             
             .btn-doc-action {
                 background: none; 
                 border: none; 
-                color: var(--primary); 
-                font-size: 1.1rem; 
+                width: 26px;
+                height: 26px;
                 cursor: pointer; 
                 display: inline-flex; 
                 align-items: center; 
                 justify-content: center;
-                padding: 3px; 
                 border-radius: 4px; 
-                transition: 0.2s;
+                transition: all 0.2s;
+                font-size: 1.05rem;
             }
-            .btn-doc-action:hover { 
-                background: var(--bg-main); 
-                color: #1d4ed8; 
+
+            /* Tombol View (Biru) */
+            .btn-doc-view {
+                color: #2563eb;
+            }
+            .btn-doc-view:hover {
+                background: #eff6ff;
+                color: #1d4ed8;
+            }
+
+            /* Tombol Upload / Ganti (Hijau Emerald) */
+            .btn-doc-upload {
+                color: #059669;
+            }
+            .btn-doc-upload:hover {
+                background: #ecfdf5;
+                color: #047857;
             }
         </style>
 
@@ -282,63 +300,57 @@ export function openEntryModal(config) {
                 });
             }
 
-            // KLIK TOMBOL DOKUMEN: PREVIEW / LIHAT vs UPLOAD / REPLACE
+            // KLIK TOMBOL DOKUMEN: VIEW (PREVIEW) & UPLOAD (REPLACE)
             tbody.addEventListener('click', (e) => {
                 const viewBtn = e.target.closest('.btn-doc-view');
                 const uploadBtn = e.target.closest('.btn-doc-upload');
-            
-                // File: menu/modal/entryExistingPNModal.js (di dalam tbody.addEventListener('click'))
 
-                // 1. AKSI MELIHAT / PREVIEW FILE
+                // 1. AKSI VIEW / LIHAT DOKUMEN
                 if (viewBtn) {
                     e.stopPropagation();
                     const row = viewBtn.closest('tr');
                     const docInput = row.querySelector('.input-doc');
                     const attachedFile = docInput._attachedFile;
-    
-                    // KONDISI 1: File fisik lokal baru (baru dipilih dari komputer pada modal ini)
+
+                    let targetUrl = null;
+
+                    // A. File fisik lokal yang baru dipilih dari komputer
                     if (attachedFile instanceof File || attachedFile instanceof Blob) {
-                        const fileUrl = URL.createObjectURL(attachedFile);
-                        const win = window.open(fileUrl, '_blank');
-                        if (!win) {
-                            // Jika diblokir pop-up blocker browser, beri opsi klik manual
-                            Swal.fire({
-                                icon: 'info',
-                                title: 'Preview File Lokal',
-                                html: `Pop-up tab baru diblokir oleh browser Anda.<br><br><a href="${fileUrl}" target="_blank" style="display:inline-block; padding:10px 20px; background:#2563eb; color:white; border-radius:6px; text-decoration:none; font-weight:600;">Klik di Sini untuk Buka File</a>`,
-                                background: 'var(--bg-card)', color: 'var(--text-main)'
-                            });
-                        }
+                        targetUrl = URL.createObjectURL(attachedFile);
+                    } 
+                    // B. File Google Drive dari Supabase
+                    else if (typeof attachedFile === 'string' && (attachedFile.startsWith('http://') || attachedFile.startsWith('https://'))) {
+                        targetUrl = attachedFile;
+                    }
+
+                    // Eksekusi buka file di tab baru via virtual anchor tag (Anti Pop-up Blocker & tidak merusak modal)
+                    if (targetUrl) {
+                        const a = document.createElement('a');
+                        a.href = targetUrl;
+                        a.target = '_blank';
+                        a.rel = 'noopener noreferrer';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
                         return;
                     }
-    
-                    // KONDISI 2: File sudah ada di Google Drive (membuka link Drive)
-                    if (typeof attachedFile === 'string' && (attachedFile.startsWith('http://') || attachedFile.startsWith('https://'))) {
-                        const win = window.open(attachedFile, '_blank');
-                        if (!win) {
-                            // Jika diblokir pop-up blocker browser, beri opsi klik manual
-                            Swal.fire({
-                                icon: 'info',
-                                title: 'Buka di Google Drive',
-                                html: `Pop-up tab baru diblokir oleh browser Anda.<br><br><a href="${attachedFile}" target="_blank" style="display:inline-block; padding:10px 20px; background:#10b981; color:white; border-radius:6px; text-decoration:none; font-weight:600;"><i class="ph ph-google-drive-logo"></i> Buka File di Google Drive</a>`,
-                                background: 'var(--bg-card)', color: 'var(--text-main)'
-                            });
-                        }
-                        return;
-                    }
-    
-                    // KONDISI 3: Tiket lama yang dibuat sebelum Google Drive dipasang (hanya ada teks nama file)
+
+                    // C. Jika file fisik belum ada (data lama / gdrive_file_url null)
                     if (docInput.value) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'File Fisik Belum Tersedia',
-                            html: `Dokumen tercatat sebagai <b>"${docInput.value}"</b>.<br><br>Namun tiket ini belum memiliki file fisik di Google Drive (kemungkinan dibuat sebelum integrasi Drive aktif).<br><br>Jika ingin melampirkan file fisiknya, gunakan tombol ganti (<i class="ph ph-arrows-clockwise"></i>) di sampingnya.`,
-                            background: 'var(--bg-card)', color: 'var(--text-main)'
-                        });
-                        return;
+                        Swal.showValidationMessage(`Dokumen "${docInput.value}" tercatat, tetapi file fisik tidak tersedia di Google Drive. Silakan gunakan ikon ganti file.`);
+                    } else {
+                        Swal.showValidationMessage('Tidak ada lampiran dokumen pada baris ini.');
                     }
-    
-                    Swal.showValidationMessage('Tidak ada lampiran dokumen pada baris ini.');
+                    return;
+                }
+
+                // 2. AKSI UPLOAD / GANTI FILE BARU (SEBELUMNYA HILANG)
+                if (uploadBtn) {
+                    e.stopPropagation();
+                    const row = uploadBtn.closest('tr');
+                    activeFileInputTarget = row.querySelector('.input-doc');
+                    filePicker.value = ''; // Reset agar bisa memilih file yang sama jika perlu
+                    filePicker.click();
                     return;
                 }
             });
@@ -348,15 +360,15 @@ export function openEntryModal(config) {
                     const file = e.target.files[0];
                     activeFileInputTarget.value = file.name.toUpperCase();
                     activeFileInputTarget._attachedFile = file;
-            
-                    // Otomatis ubah tombol di samping input menjadi tombol View + Replace
+
+                    // Update wadah tombol menjadi View (Mata Biru) + Ganti (Panah Putar Hijau)
                     const container = activeFileInputTarget.parentElement.querySelector('.doc-actions-container');
                     if (container) {
                         container.innerHTML = `
-                            <button type="button" class="btn-doc-action btn-doc-view" tabindex="-1" title="Lihat File Baru">
+                            <button type="button" class="btn-doc-action btn-doc-view" tabindex="-1" title="Lihat Dokumen">
                                 <i class="ph ph-eye"></i>
                             </button>
-                            <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Ganti Lagi">
+                            <button type="button" class="btn-doc-action btn-doc-upload" tabindex="-1" title="Ganti File">
                                 <i class="ph ph-arrows-clockwise"></i>
                             </button>
                         `;

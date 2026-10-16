@@ -192,6 +192,17 @@ export function render(container) {
             const idx = btnStatus.getAttribute('data-index');
             const targetTicket = ticketData[idx];
 
+            // --- CEK OTORISASI ROLE ---
+            let activeUser = { role: 'Requester', unit: '-' };
+            try { const stored = localStorage.getItem('currentUser'); if (stored) activeUser = JSON.parse(stored); } catch (e) {}
+            const isTed = (activeUser.role && activeUser.role.toUpperCase().includes('TED')) || (activeUser.unit && activeUser.unit.toUpperCase().includes('TED'));
+
+            if (!isTed) {
+                Swal.fire({ icon: 'error', title: 'Akses Ditolak', text: 'Hanya Admin TED-2 yang diizinkan untuk mengubah status tiket.', background: 'var(--bg-card)', color: 'var(--text-main)' });
+                return;
+            }
+            // --------------------------
+
             Swal.fire({
                 title: `Change Status: ${targetTicket.ticketNo}`,
                 input: 'select',
@@ -234,13 +245,23 @@ export function render(container) {
     document.getElementById('dd-detail').addEventListener('click', () => {
         const ticket = ticketData[activeDropdownIndex];
         
-        // HANYA 'Created' YANG READ-ONLY; 'Received' & 'Under Evaluation' BISA DIEDIT
-        const isReadOnly = (ticket.status === 'Created');
+        // --- CEK OTORISASI ROLE ---
+        let activeUser = { role: 'Requester', unit: '-' };
+        try { const stored = localStorage.getItem('currentUser'); if (stored) activeUser = JSON.parse(stored); } catch (e) {}
+        const isTed = (activeUser.role && activeUser.role.toUpperCase().includes('TED')) || (activeUser.unit && activeUser.unit.toUpperCase().includes('TED'));
+
+        // Aturan Read-Only:
+        // 1. Jika status 'Created', SEMUA ORANG hanya bisa Read-Only.
+        // 2. Jika status 'Under Evaluation', NON-TED hanya bisa Read-Only (TED tetap bisa edit).
+        let isReadOnly = false;
+        if (ticket.status === 'Created') isReadOnly = true;
+        if (!isTed && ticket.status === 'Under Evaluation') isReadOnly = true;
+        // --------------------------
 
         openEntryModal({
             title: !isReadOnly 
                 ? `<i class="ph ph-note-pencil"></i> Edit Ticket (${ticket.status}): ${ticket.ticketNo}` 
-                : `<i class="ph ph-file-text"></i> Ticket Details (Created): ${ticket.ticketNo}`,
+                : `<i class="ph ph-lock-key"></i> Ticket Details (Read-Only): ${ticket.ticketNo}`,
             headerData: { 
                 ticketNo: ticket.ticketNo, 
                 requester: ticket.requester, 
@@ -286,8 +307,27 @@ export function render(container) {
     });
 
     // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE
+    // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE
     document.getElementById('dd-delete').addEventListener('click', () => {
         const ticket = ticketData[activeDropdownIndex];
+
+        // --- CEK OTORISASI ROLE ---
+        let activeUser = { role: 'Requester', unit: '-' };
+        try { const stored = localStorage.getItem('currentUser'); if (stored) activeUser = JSON.parse(stored); } catch (e) {}
+        const isTed = (activeUser.role && activeUser.role.toUpperCase().includes('TED')) || (activeUser.unit && activeUser.unit.toUpperCase().includes('TED'));
+
+        // Cegah hapus jika tiket sudah diproses (Under Evaluation / Created) oleh non-TED
+        if (!isTed && (ticket.status === 'Under Evaluation' || ticket.status === 'Created')) {
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Akses Ditolak', 
+                text: `Tiket berstatus '${ticket.status}' sudah dikunci dan tidak dapat dihapus oleh Unit Pengaju.`, 
+                background: 'var(--bg-card)', color: 'var(--text-main)' 
+            });
+            return;
+        }
+        // --------------------------
+
         Swal.fire({
             title: 'Delete Ticket?',
             text: `Hapus tiket ${ticket.ticketNo}? Seluruh file lampiran di Google Drive juga akan dihapus.`,

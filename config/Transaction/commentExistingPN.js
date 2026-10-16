@@ -1,9 +1,6 @@
 // File: config/Transaction/commentExistingPN.js
 import { supabase } from '../user/supabaseClient.js';
 
-/**
- * Mengambil daftar komentar untuk suatu tiket (Diurutkan dari tanggal TERBARU)
- */
 export async function fetchComments(ticketNo) {
     const { data, error } = await supabase
         .from('existing_pn_comments')
@@ -18,9 +15,6 @@ export async function fetchComments(ticketNo) {
     return data || [];
 }
 
-/**
- * Mengirim komentar baru
- */
 export async function addComment({ ticketNo, user }) {
     const isTed = (user.role && user.role.toUpperCase().includes('TED')) || 
                   (user.unit && user.unit.toUpperCase().includes('TED'));
@@ -34,9 +28,7 @@ export async function addComment({ ticketNo, user }) {
             user_role: user.role || 'Requester',
             user_unit: user.unit || '-',
             comment_text: user.text,
-            // Jika TED yang berkomentar, otomatis sudah dibaca TED namun belum dibaca Requester
             read_by_ted: isTed ? true : false,
-            // Jika Requester yang berkomentar, otomatis sudah dibaca Requester namun belum dibaca TED
             read_by_requester: isTed ? false : true
         }])
         .select()
@@ -49,9 +41,6 @@ export async function addComment({ ticketNo, user }) {
     return data;
 }
 
-/**
- * Menghitung jumlah komentar yang BELUM dibaca oleh user saat ini
- */
 export async function getUnreadCommentCount(ticketNo, userRole = '', userUnit = '') {
     const isTed = userRole.toUpperCase().includes('TED') || userUnit.toUpperCase().includes('TED');
     
@@ -67,19 +56,12 @@ export async function getUnreadCommentCount(ticketNo, userRole = '', userUnit = 
     }
 
     const { count, error } = await query;
-    if (error) {
-        console.error('Error counting unread comments:', error);
-        return 0;
-    }
+    if (error) return 0;
     return count || 0;
 }
 
-/**
- * Menandai semua komentar pada tiket ini sebagai SUDAH DIBACA (Notifikasi Hilang Otomatis)
- */
 export async function markCommentsAsRead(ticketNo, userRole = '', userUnit = '') {
     const isTed = userRole.toUpperCase().includes('TED') || userUnit.toUpperCase().includes('TED');
-
     const updatePayload = isTed ? { read_by_ted: true } : { read_by_requester: true };
     const filterColumn = isTed ? 'read_by_ted' : 'read_by_requester';
 
@@ -89,7 +71,5 @@ export async function markCommentsAsRead(ticketNo, userRole = '', userUnit = '')
         .eq('ticket_no', ticketNo)
         .eq(filterColumn, false);
 
-    if (error) {
-        console.error('Error marking comments as read:', error);
-    }
+    if (error) console.error('Error marking comments as read:', error);
 }

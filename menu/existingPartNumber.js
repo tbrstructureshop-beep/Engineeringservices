@@ -1,6 +1,13 @@
 // File: menu/existingPartNumber.js
 import { openEntryModal } from './modal/entryExistingPNModal.js'; 
-import { openNotifModal } from './modal/notifExistingPNModal.js'; // <-- Tambahkan import ini
+import { openNotifModal } from './modal/notifExistingPNModal.js';
+import { supabase } from '../config/user/supabaseClient.js';
+import { 
+    fetchAllTickets, 
+    createTicketWithItems, 
+    updateTicketAndItems, 
+    deleteTicketCompletely 
+} from '../config/Transaction/existingPN.js';
 
 export function render(container) {
     container.innerHTML = `
@@ -52,7 +59,13 @@ export function render(container) {
                             <th>Requested PNs (MANU_MAT)</th>
                         </tr>
                     </thead>
-                    <tbody id="tbody-pn"></tbody>
+                    <tbody id="tbody-pn">
+                        <tr>
+                            <td colspan="6" style="text-align: center; padding: 30px; color: var(--text-muted);">
+                                <i class="ph ph-spinner ph-spin" style="font-size: 1.5rem;"></i> Memuat tiket dari database...
+                            </td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
@@ -64,32 +77,9 @@ export function render(container) {
         </div>
     `;
 
-    // 1. DATA SEEDING
-    let ticketData = [
-        {
-            ticketNo: "492018", 
-            status: "Received", // Bisa Diedit
-            request: "EXISTING PN", 
-            requester: "Muhammad Rizki F", 
-            dept: "TCP-10",
-            pns: [
-                { pn: "CF1633N", desc: "FREEZER", type: "TOOLS", uom: "2 EA", dangerous: "NO", shelf: "NO", mfr: "MFR1", doc: "MANUAL_CF1633N.PDF", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" },
-                { pn: "HEX-BOLT-9", desc: "HEXAGONAL BOLT", type: "SPAREPART", uom: "10 EA", dangerous: "NO", shelf: "NO", mfr: "MFR2", doc: "", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" }
-            ]
-        },
-        {
-            ticketNo: "492019", 
-            status: "Created", // Terkunci (Read-Only)
-            request: "EXISTING PN", 
-            requester: "Budi Santoso", 
-            dept: "TCP-12",
-            pns: [
-                { pn: "VALVE-OIL-4", desc: "PRESSURE VALVE", type: "EQUIPMENT", uom: "1 EA", dangerous: "NO", shelf: "NO", mfr: "BOSCH", doc: "SPEC_VALVE.PDF", docFile: null, uplant: "", uloc: "", rplant: "", riss: "", rrec: "", pshop: "", pplant: "", sloc: "", ac: "", pur: "", reg: "" }
-            ]
-        }
-    ];
+    let ticketData = [];
 
-    // 2. STYLING STATUS
+    // 1. STYLING STATUS
     function getStatusStyle(status) {
         if (status === 'Received') return 'background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;';
         if (status === 'Under Evaluation') return 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;';
@@ -97,13 +87,18 @@ export function render(container) {
         return 'background: #f1f5f9; color: #475569;';
     }
 
-    // 3. RENDER TABEL
+    // 2. RENDER TABEL
     function renderTable() {
         const tbody = document.getElementById('tbody-pn');
         tbody.innerHTML = ''; 
 
+        if (ticketData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 25px; color: var(--text-muted);">Belum ada tiket tersimpan.</td></tr>`;
+            return;
+        }
+
         ticketData.forEach((row, index) => {
-            const pnListHTML = row.pns.map(p => `<span class="pn-badge">${p.pn}</span>`).join('');
+            const pnListHTML = (row.pns || []).map(p => `<span class="pn-badge">${p.pn}</span>`).join('');
 
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -120,12 +115,25 @@ export function render(container) {
                 </td>
                 <td><span class="status-badge badge-gray">${row.request}</span></td>
                 <td>${row.requester}</td>
-                <td><div class="pn-list">${pnListHTML}</div></td>
+                <td><div class="pn-list">${pnListHTML || '-'}</div></td>
             `;
             tbody.appendChild(tr);
         });
     }
-    renderTable();
+
+    // 3. LOAD DATA DARI SUPABASE
+    async function loadData() {
+        try {
+            ticketData = await fetchAllTickets();
+            renderTable();
+        } catch (err) {
+            console.error('Error loadData:', err);
+            document.getElementById('tbody-pn').innerHTML = `
+                <tr><td colspan="6" style="text-align:center; color:#ef4444; padding:20px;">Gagal memuat tiket dari database!</td></tr>
+            `;
+        }
+    }
+    loadData();
 
     // 4. DROPDOWN DAN ACTIONS
     const globalDropdown = document.getElementById('global-dropdown');
@@ -156,28 +164,39 @@ export function render(container) {
             return;
         }
 
-        // KLIK UBAH STATUS
+        // KLIK UBAH STATUS (UPDATE LANGSUNG KE SUPABASE)
         const btnStatus = e.target.closest('.btn-status');
         if (btnStatus) {
             const idx = btnStatus.getAttribute('data-index');
+            const targetTicket = ticketData[idx];
+
             Swal.fire({
-                title: `Change Status: ${ticketData[idx].ticketNo}`,
+                title: `Change Status: ${targetTicket.ticketNo}`,
                 input: 'select',
                 inputOptions: { 
                     'Received': 'Received', 
                     'Under Evaluation': 'Under Evaluation', 
                     'Created': 'Created' 
                 },
-                inputValue: ticketData[idx].status,
+                inputValue: targetTicket.status,
                 showCancelButton: true,
                 confirmButtonText: 'Update Status',
                 confirmButtonColor: 'var(--primary)',
                 background: 'var(--bg-card)', color: 'var(--text-main)'
-            }).then((res) => {
+            }).then(async (res) => {
                 if (res.isConfirmed) {
-                    ticketData[idx].status = res.value; 
-                    renderTable(); 
-                    Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Status set to ${res.value}`, showConfirmButton: false, timer: 1500 });
+                    const { error } = await supabase
+                        .from('existing_pn_tickets')
+                        .update({ status: res.value })
+                        .eq('ticket_no', targetTicket.ticketNo);
+
+                    if (!error) {
+                        targetTicket.status = res.value; 
+                        renderTable(); 
+                        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Status set to ${res.value}`, showConfirmButton: false, timer: 1500 });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Gagal Ubah Status', text: error.message });
+                    }
                 }
             });
         }
@@ -208,65 +227,122 @@ export function render(container) {
             initialData: ticket.pns,
             isReadOnly: isReadOnly,
             
-            // Simpan perubahan ke ticketData jika dalam mode edit
-            onSubmit: (updatedPns) => {
-                ticket.pns = updatedPns;
-                renderTable();
+            // Simpan Perubahan ke Supabase & Google Drive
+            onSubmit: async (updatedPns) => {
+                Swal.fire({
+                    title: 'Memperbarui Tiket & File...',
+                    text: 'Sedang memproses perubahan ke Supabase dan Google Drive...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading(),
+                    background: 'var(--bg-card)', color: 'var(--text-main)'
+                });
+
+                try {
+                    await updateTicketAndItems(ticket.ticketNo, updatedPns);
+                    await loadData(); // Refresh data riil dari Supabase
+                    Swal.fire({ 
+                        icon: 'success', 
+                        title: 'Data Saved!', 
+                        text: 'Data tiket dan dokumen berhasil diperbarui.', 
+                        background: 'var(--bg-card)', color: 'var(--text-main)', 
+                        timer: 1500, showConfirmButton: false 
+                    });
+                } catch (err) {
+                    console.error('Update ticket error:', err);
+                    Swal.fire({ 
+                        icon: 'error', 
+                        title: 'Gagal Update Tiket', 
+                        text: err.message, 
+                        background: 'var(--bg-card)', color: 'var(--text-main)' 
+                    });
+                }
             }
         });
     });
 
-    // 6. DELETE TIKET
+    // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE
     document.getElementById('dd-delete').addEventListener('click', () => {
+        const ticket = ticketData[activeDropdownIndex];
         Swal.fire({
             title: 'Delete Ticket?',
-            text: `Hapus tiket ${ticketData[activeDropdownIndex].ticketNo}?`,
-            icon: 'warning', showCancelButton: true, confirmButtonColor: '#ef4444',
+            text: `Hapus tiket ${ticket.ticketNo}? Seluruh file lampiran di Google Drive juga akan dihapus.`,
+            icon: 'warning', 
+            showCancelButton: true, 
+            confirmButtonColor: '#ef4444',
             background: 'var(--bg-card)', color: 'var(--text-main)'
-        }).then((res) => {
+        }).then(async (res) => {
             if (res.isConfirmed) {
-                ticketData.splice(activeDropdownIndex, 1);
-                renderTable();
+                Swal.fire({
+                    title: 'Menghapus Tiket...',
+                    text: 'Sedang membersihkan database & file Google Drive...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading(),
+                    background: 'var(--bg-card)', color: 'var(--text-main)'
+                });
+
+                try {
+                    await deleteTicketCompletely(ticket.ticketNo);
+                    await loadData();
+                    Swal.fire({ icon: 'success', title: 'Terhapus!', text: 'Tiket berhasil dihapus.', timer: 1500, showConfirmButton: false });
+                } catch (err) {
+                    console.error('Delete error:', err);
+                    Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: err.message });
+                }
             }
         });
     });
 
-    // File: menu/existingPartNumber.js -> Poin 7
+    // 7. INPUT TIKET BARU (UPLOAD KE GDRIVE + SUPABASE)
     document.getElementById('btn-add-pn').addEventListener('click', () => {
         const randomTicket = Math.floor(100000 + Math.random() * 900000).toString();
-    
-        // 1. Ambil user aktif dari session localStorage login saat ini
-        let activeUser = { name: 'Unknown User', unit: '-' };
+
+        // Ambil user aktif dari session localStorage login saat ini
+        let activeUser = { name: 'User', unit: '-', empId: null };
         try {
             const stored = localStorage.getItem('currentUser');
-            if (stored) {
-                activeUser = JSON.parse(stored);
-            }
+            if (stored) activeUser = JSON.parse(stored);
         } catch (e) {
-            console.error("Gagal membaca session user:", e);
+            console.error('User session error:', e);
         }
-    
+
         openEntryModal({
             title: '<i class="ph ph-hard-drives"></i> Create New PN Ticket',
-            // 2. Gunakan data user login (name & unit) secara dinamis
             headerData: { 
                 ticketNo: randomTicket, 
                 requester: activeUser.name || 'User', 
-                department: activeUser.unit || '-' 
+                department: activeUser.unit || '-',
+                empId: activeUser.empId || null
             },
-            initialData: [], // Pastikan selalu array kosong untuk form baru
+            initialData: [],
             isReadOnly: false,
-            onSubmit: (arrayOfPns, header) => {
-                const newTicket = {
-                    ticketNo: header.ticketNo,
-                    status: "Received",
-                    request: "EXISTING PN",
-                    requester: header.requester,
-                    dept: header.department,
-                    pns: arrayOfPns
-                };
-                ticketData.unshift(newTicket);
-                renderTable();
+            onSubmit: async (arrayOfPns, header) => {
+                Swal.fire({
+                    title: 'Menyimpan Tiket Baru...',
+                    text: 'Sedang mengunggah file ke Google Drive dan mencatat ke database...',
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading(),
+                    background: 'var(--bg-card)', color: 'var(--text-main)'
+                });
+
+                try {
+                    await createTicketWithItems(header, arrayOfPns);
+                    await loadData();
+                    Swal.fire({ 
+                        icon: 'success', 
+                        title: 'Tiket Berhasil Dibuat!', 
+                        text: `Tiket No. ${header.ticketNo} berhasil disimpan ke database.`, 
+                        background: 'var(--bg-card)', color: 'var(--text-main)', 
+                        timer: 1500, showConfirmButton: false 
+                    });
+                } catch (err) {
+                    console.error('Create ticket error:', err);
+                    Swal.fire({ 
+                        icon: 'error', 
+                        title: 'Gagal Menyimpan Tiket', 
+                        text: err.message, 
+                        background: 'var(--bg-card)', color: 'var(--text-main)' 
+                    });
+                }
             }
         });
     });

@@ -204,8 +204,8 @@ export function openEntryModal(config) {
                 const shelfVal = (data && data.shelf !== undefined) ? data.shelf : 'NO';
             
                 const docVal = val('doc');
-                const hasFile = Boolean(docVal || (data && data.docFile));
-            
+                const hasFile = Boolean(docVal || (data && (data.docFile || data.gdriveUrl)));
+                
                 tr.innerHTML = `
                     <td style="position: sticky; left: 0; background: var(--bg-card); z-index: 2; text-align:center; border-right: 1px solid var(--border-color);">
                         ${!isReadOnly ? `
@@ -243,8 +243,11 @@ export function openEntryModal(config) {
                 `;
             
                 if (data && data.docFile) {
-                    tr.querySelector('.input-doc')._attachedFile = data.docFile;
-                }
+                tr.querySelector('.input-doc')._attachedFile = data.docFile;
+            } else if (data && data.gdriveUrl) {
+                // Simpan URL Google Drive agar saat tombol mata diklik langsung terbuka
+                tr.querySelector('.input-doc')._attachedFile = data.gdriveUrl;
+            }
             
                 tbody.appendChild(tr);
                 return tr;

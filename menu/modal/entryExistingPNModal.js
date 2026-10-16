@@ -128,28 +128,39 @@ export function openEntryModal(config) {
             const filePicker = document.getElementById('cell-file-picker');
             let activeFileInputTarget = null;
 
+            // File: menu/modal/entryExistingPNModal.js
             function addRow(data = null) {
                 const tr = document.createElement('tr');
                 tr.className = 'pn-row';
                 const roAttr = isReadOnly ? 'readonly' : '';
                 
+                // Helper untuk mengambil data atau default string kosong
                 const val = (prop) => (data && data[prop] !== undefined) ? data[prop] : '';
+                
+                // Nomor baris otomatis (1, 2, 3...) jika data.no belum ada
+                const currentRowNo = (data && data.no) ? data.no : (tbody.children.length + 1);
+                
+                // Default nilai siap pakai jika data baru (data == null)
+                const reqVal = (data && data.request !== undefined) ? data.request : 'EXISTING PN';
+                const dgVal  = (data && data.dangerous !== undefined) ? data.dangerous : 'NO';
+                const shelfVal = (data && data.shelf !== undefined) ? data.shelf : 'NO';
+            
                 const docVal = val('doc');
                 const hasFile = data && data.docFile;
-
+            
                 tr.innerHTML = `
                     <td style="position: sticky; left: 0; background: var(--bg-card); z-index: 2; text-align:center; border-right: 1px solid var(--border-color);">
                         ${!isReadOnly ? `
                             <button class="btn-del-row" style="background:none; border:none; color:#ef4444; font-size:1.2rem; cursor:pointer;" tabindex="-1" title="Delete Row"><i class="ph ph-trash"></i></button>
                         ` : `<span style="color: var(--text-muted); font-size:0.75rem;">-</span>`}
                     </td>
-                    <td><input type="text" class="excel-input input-req" placeholder="EXISTING PN" value="${val('request')}" ${roAttr}></td>
-                    <td><input type="text" class="excel-input input-dg" placeholder="NO" value="${val('dangerous')}" ${roAttr}></td>
-                    <td><input type="text" class="excel-input input-shelf" placeholder="NO" value="${val('shelf')}" ${roAttr}></td>
-                    <td><input type="text" class="excel-input input-no" placeholder="1" value="${val('no')}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-req" value="${reqVal}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-dg" value="${dgVal}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-shelf" value="${shelfVal}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-no" value="${currentRowNo}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-type" placeholder="TOOLS" value="${val('type')}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-desc" placeholder="FREEZER" value="${val('desc')}" ${roAttr}></td>
-                    <td><input type="text" class="excel-input input-uom" placeholder="2 EA" value="${val('uom')}" ${roAttr}></td>
+                    <td><input type="text" class="excel-input input-uom" placeholder="EA" value="${val('uom')}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-pn" placeholder="CF1633N" value="${val('pn')}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-mfr" value="${val('mfr')}" ${roAttr}></td>
                     <td>
@@ -172,11 +183,11 @@ export function openEntryModal(config) {
                     <td><input type="text" class="excel-input input-pur" value="${val('pur')}" ${roAttr}></td>
                     <td><input type="text" class="excel-input input-reg" value="${val('reg')}" ${roAttr}></td>
                 `;
-
+            
                 if (data && data.docFile) {
                     tr.querySelector('.input-doc')._attachedFile = data.docFile;
                 }
-
+            
                 tbody.appendChild(tr);
                 return tr;
             }

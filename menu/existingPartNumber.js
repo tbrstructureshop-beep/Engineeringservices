@@ -57,6 +57,7 @@ export function render(container) {
                             <th>Request Type</th>
                             <th>Requester</th>
                             <th>Requested PNs (MANU_MAT)</th>
+                            <th>Timeline & Dates</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-pn">
@@ -85,6 +86,19 @@ export function render(container) {
         if (status === 'Under Evaluation') return 'background: #fef3c7; color: #92400e; border: 1px solid #fde68a;';
         if (status === 'Created') return 'background: #dcfce7; color: #166534; border: 1px solid #bbf7d0;';
         return 'background: #f1f5f9; color: #475569;';
+    }
+
+    function formatDateTime(dateStr) {
+        if (!dateStr) return '-';
+        const d = new Date(dateStr);
+        if (isNaN(d.getTime())) return '-';
+    
+        // Menggunakan en-GB agar urutannya Day Month Year (DD MMM YYYY)
+        return d.toLocaleDateString('en-GB', { 
+            day: '2-digit', 
+            month: 'short', 
+            year: 'numeric' 
+        }).toUpperCase(); // Hasil: "16 OCT 2026"
     }
 
     // 2. RENDER TABEL
@@ -116,6 +130,14 @@ export function render(container) {
                 <td><span class="status-badge badge-gray">${row.request}</span></td>
                 <td>${row.requester}</td>
                 <td><div class="pn-list">${pnListHTML || '-'}</div></td>
+
+                <!-- KOLOM TIMELINE BARU -->
+                <td style="font-size: 0.75rem; line-height: 1.4; color: var(--text-muted); white-space: nowrap;">
+                    <div><i class="ph ph-calendar-plus" style="color:var(--primary);"></i> <b>Sub:</b> ${formatDateTime(row.createdAt)}</div>
+                    <div><i class="ph ph-clock-clockwise" style="color:#f59e0b;"></i> <b>Upd:</b> ${formatDateTime(row.updatedAt)}</div>
+                    ${row.closedAt ? `<div><i class="ph ph-check-circle" style="color:#10b981;"></i> <b>Closed:</b> ${formatDateTime(row.closedAt)}</div>` : ''}
+                </td>
+
             `;
             tbody.appendChild(tr);
         });
@@ -222,7 +244,10 @@ export function render(container) {
             headerData: { 
                 ticketNo: ticket.ticketNo, 
                 requester: ticket.requester, 
-                department: ticket.dept 
+                department: ticket.dept,
+                createdAt: ticket.createdAt,
+                updatedAt: ticket.updatedAt,
+                closedAt: ticket.closedAt
             },
             initialData: ticket.pns,
             isReadOnly: isReadOnly,

@@ -9,7 +9,7 @@ import {
     deleteTicketCompletely 
 } from '../config/Transaction/existingPN.js';
 import { createNotification } from '../config/notification.js';
-
+import { ExistingPNFilterManager } from './searchAndFilters/ExistingNewPN.js';
 
 export function render(container) {
     container.innerHTML = `
@@ -42,9 +42,14 @@ export function render(container) {
                 <h3 class="card-title" style="margin-bottom: 5px;"><i class="ph ph-hard-drives"></i> Existing Part Number Tickets</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted);">Manage material tracking by Ticket.</p>
             </div>
-            <button id="btn-add-pn" class="btn-submit" style="margin-top: 0;">
-                <i class="ph ph-plus-circle"></i> Input New Data
-            </button>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button type="button" id="btn-toggle-filter-mode" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); padding: 9px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;">
+                    <i class="ph ph-funnel" style="font-size: 1.1rem; color: var(--primary);"></i> <span id="label-filter-mode">Filter Mode</span>
+                </button>
+                <button id="btn-add-pn" class="btn-submit" style="margin-top: 0;">
+                    <i class="ph ph-plus-circle"></i> Input New Data
+                </button>
+            </div>
         </div>
 
         <div class="card">
@@ -93,6 +98,12 @@ export function render(container) {
     let ticketData = [];
     let activeFilterTicket = null;
 
+    const filterManager = new ExistingPNFilterManager({
+        onFilterApplied: () => {
+            renderTable(); // Re-render tabel setiap kali filter checklist diubah
+        }
+    });
+
     // 1. STYLING STATUS
     function getStatusStyle(status) {
         if (status === 'Received') return 'background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe;';
@@ -132,9 +143,12 @@ export function render(container) {
         }
 
         // Terapkan filter jika ada
+        let filteredDataset = filterManager.getFilteredData();
+
+        // 2. Terapkan Filter Notifikasi (jika ada tiket yang diklik dari lonceng)
         const displayedTickets = activeFilterTicket 
-            ? ticketData.filter(t => t.ticketNo === activeFilterTicket)
-            : ticketData;
+            ? filteredDataset.filter(t => t.ticketNo === activeFilterTicket)
+            : filteredDataset;
 
         if (displayedTickets.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 25px; color: var(--text-muted);">${activeFilterTicket ? `Tiket #${activeFilterTicket} tidak ditemukan di database.` : 'Belum ada tiket tersimpan.'}</td></tr>`;
@@ -186,6 +200,7 @@ export function render(container) {
     async function loadData() {
         try {
             ticketData = await fetchAllTickets();
+            filterManager.setDataset(ticketData);
             renderTable();
         } catch (err) {
             console.error('Error loadData:', err);
@@ -491,6 +506,26 @@ export function render(container) {
         btnResetFilter.addEventListener('click', () => {
             activeFilterTicket = null;
             renderTable();
+        });
+    }
+
+    // Tombol Toggle Mode Filter ala Google Sheets
+    const btnToggleFilter = document.getElementById('btn-toggle-filter-mode');
+    const labelFilterMode = document.getElementById('label-filter-mode');
+    if (btnToggleFilter) {
+        btnToggleFilter.addEventListener('click', () => {
+            const tableEl = document.getElementById('table-pn');
+            const isActive = filterManager.toggleFilterMode(tableEl);
+
+            if (isActive) {
+                btnToggleFilter.style.borderColor = 'var(--primary)';
+                btnToggleFilter.style.background = '#eff6ff';
+                labelFilterMode.textContent = 'Exit Filter Mode';
+            } else {
+                btnToggleFilter.style.borderColor = 'var(--border-color)';
+                btnToggleFilter.style.background = 'var(--bg-card)';
+                labelFilterMode.textContent = 'Filter Mode';
+            }
         });
     }
 

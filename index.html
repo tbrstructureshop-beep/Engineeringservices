@@ -235,9 +235,9 @@
                     <i class="ph ph-moon"></i>
                 </button>
 
-                <div class="icon-btn notification">
+                <div class="icon-btn notification" id="btn-notification" style="cursor: pointer;" title="View Notifications">
                     <i class="ph ph-bell"></i>
-                    <span class="badge"></span>
+                    <span class="badge" id="notif-badge" style="display: none; width: 8px; height: 8px; background: #ef4444; border-radius: 50%;"></span>
                 </div>
                 
                 <!-- USER PROFILE (Klik untuk buka modal detail & logout) -->
@@ -296,6 +296,37 @@
             if (userProfileBtn && currentUser) {
                 userProfileBtn.addEventListener('click', () => {
                     openUserModal(currentUser);
+                });
+            }
+
+            // --- SISTEM NOTIFIKASI LONCENG ---
+            const btnNotification = document.getElementById('btn-notification');
+            const notifBadge = document.getElementById('notif-badge');
+
+            async function updateNotificationBadge() {
+                if (!currentUser || !currentUser.unit) return;
+                try {
+                    const { getUnreadNotificationCount } = await import('./config/notification.js');
+                    const unreadCount = await getUnreadNotificationCount(currentUser.unit, currentUser.empId);
+                    if (unreadCount > 0 && notifBadge) {
+                        notifBadge.style.display = 'block';
+                    } else if (notifBadge) {
+                        notifBadge.style.display = 'none';
+                    }
+                } catch (e) {
+                    console.error('Gagal memuat badge notifikasi:', e);
+                }
+            }
+
+            // Jalankan cek badge saat pertama kali dashboard dibuka
+            updateNotificationBadge();
+            // Polling berkala setiap 60 detik (Realtime feeling)
+            setInterval(updateNotificationBadge, 60000);
+
+            if (btnNotification) {
+                btnNotification.addEventListener('click', async () => {
+                    const { openNotificationModal } = await import('./menu/notification.js');
+                    openNotificationModal(currentUser, updateNotificationBadge);
                 });
             }
 

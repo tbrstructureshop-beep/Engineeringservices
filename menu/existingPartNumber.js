@@ -10,6 +10,7 @@ import {
 } from '../config/Transaction/existingPN.js';
 import { createNotification } from '../config/notification.js';
 import { ExistingPNFilterManager } from './searchAndFilters/ExistingNewPN.js';
+import { exportExistingPNTicketToExcel } from './getExcelFile/existingNewPN.js';
 
 export function render(container) {
     container.innerHTML = `
@@ -100,6 +101,7 @@ export function render(container) {
         <div id="global-dropdown" class="dropdown-content-fixed">
             <div class="dropdown-item btn-detail" id="dd-detail"><i class="ph ph-eye"></i> View Detail / Edit</div>
             <div class="dropdown-item" id="dd-notif"><i class="ph ph-envelope-simple"></i> Outlook Notification</div>
+            <div class="dropdown-item" id="dd-excel" style="color: #059669;"><i class="ph ph-file-xls"></i> Download Excel</div>
             <div class="dropdown-item text-red btn-delete" id="dd-delete"><i class="ph ph-trash"></i> Delete Ticket</div>
         </div>
     `;
@@ -333,6 +335,24 @@ export function render(container) {
     document.getElementById('dd-notif').addEventListener('click', () => {
         const ticket = ticketData[activeDropdownIndex];
         openNotifModal(ticket);
+    });
+
+    // EVENT LISTENER DOWNLOAD EXCEL
+    document.getElementById('dd-excel').addEventListener('click', () => {
+        const ticket = ticketData[activeDropdownIndex];
+        if (ticket) {
+            exportExistingPNTicketToExcel(ticket);
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: 'File Excel berhasil diunduh!',
+                showConfirmButton: false,
+                timer: 2000,
+                background: 'var(--bg-card)',
+                color: 'var(--text-main)'
+            });
+        }
     });
 
     // 5. DETAIL VIEW / EDIT MODAL

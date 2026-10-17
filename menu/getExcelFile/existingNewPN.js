@@ -6,8 +6,7 @@ export function exportTicketToExcel(ticket) {
         return;
     }
 
-    // 1. Definisikan mapping judul kolom mentah beserta sub-judulnya di dalam tanda kurung ()
-    // Kolom 'ACT' sengaja di-exclude dari array ini.
+    // 1. Definisikan Header & Sub-judul (Tanpa Kolom ACT)
     const rawColumns = [
         { title: "Request", sub: "" },
         { title: "Dangerous Good", sub: "" },
@@ -33,23 +32,20 @@ export function exportTicketToExcel(ticket) {
         { title: "AIRCRAFT REGISTRATION", sub: "Reg" }
     ];
 
-    // 2. Susun Baris Header 1 dan Header 2
     const headerRow1 = [];
     const headerRow2 = [];
 
     rawColumns.forEach(col => {
         if (col.sub) {
-            // Jika memiliki sub (artinya ada bagian kurung), pisahkan ke row 1 dan row 2
             headerRow1.push(col.title);
             headerRow2.push(col.sub);
         } else {
-            // Jika tidak ada sub, row 1 diisi judul utama, row 2 dikosongkan (nanti di-merge vertikal)
             headerRow1.push(col.title);
             headerRow2.push("");
         }
     });
 
-    // 3. Susun Data Body Baris per Baris (ACT di-exclude)
+    // 2. Susun Data Body Baris per Baris
     const rows = ticket.pns.map((p, idx) => {
         let docCell = p.doc || '';
         if (p.gdriveUrl) {
@@ -60,7 +56,7 @@ export function exportTicketToExcel(ticket) {
             p.request || "EXISTING PN",   // Request
             p.dangerous || "NO",          // Dangerous Good
             p.shelf || "NO",              // Shelf Life
-            ticket.requester || "-",      // Requester (Sisipan)
+            ticket.requester || "-",      // Requester
             p.no || (idx + 1),            // NO
             p.type || "",                 // MATL_TYPE
             p.desc || "",                 // MATL_DESC
@@ -82,36 +78,33 @@ export function exportTicketToExcel(ticket) {
         ];
     });
 
-    // Gabungkan struktur sheet: Header 1, Header 2, lalu Data Body
     const sheetData = [headerRow1, headerRow2, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
-    // 4. Konfigurasi Merge Vertikal untuk Header yang tidak memiliki sub-judul
+    // 3. Konfigurasi Merge Vertikal untuk Header Utama
     ws['!merges'] = [];
     rawColumns.forEach((col, idx) => {
         if (!col.sub) {
-            // Merge baris 0 (row 1) dan baris 1 (row 2) pada kolom index `idx`
             ws['!merges'].push({ s: { r: 0, c: idx }, e: { r: 1, c: idx } });
         }
     });
 
-    // 5. Styling Layout, Pewarnaan, Border, dan Alignment secara Presisi
+    // 4. Styling menggunakan spesifikasi opensource `xlsx-js-style`
     const range = XLSX.utils.decode_range(ws['!ref']);
     
     for (let R = range.s.r; R <= range.e.r; ++R) {
         for (let C = range.s.c; C <= range.e.c; ++C) {
             const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
             if (!ws[cellAddress]) {
-                // Pastikan sel kosong tetap memiliki struktur objek agar styling border/background merata
                 ws[cellAddress] = { t: 's', v: '' };
             }
 
             ws[cellAddress].s = ws[cellAddress].s || {};
 
             if (R === 0 || R === 1) {
-                // STYLING HEADER (Baris 1 & 2): Background Navy #203d6b, Font Putih, Bold, Center, Border Tipis
+                // STYLING HEADER: Navy #203D6B, Font Putih, Bold, Center, Border Tipis
                 ws[cellAddress].s = {
-                    fill: { fgColor: { rgb: "203D6B" } },
+                    fill: { patternType: "solid", fgColor: { rgb: "203D6B" } },
                     font: { color: { rgb: "FFFFFF" }, bold: true, name: "Calibri", sz: 10 },
                     alignment: { horizontal: "center", vertical: "center", wrapText: true },
                     border: {
@@ -122,14 +115,12 @@ export function exportTicketToExcel(ticket) {
                     }
                 };
             } else {
-                // STYLING BODY: Zebra (#dee0e3 untuk baris genap, putih untuk ganjil), Font Hitam, Alignment Sesuai Jenis Data
+                // STYLING BODY: Zebra (#DEE0E3 dan Putih), Font Hitam, Border Abu-abu Tipis
                 const isEvenRow = R % 2 === 0;
-                
-                // Kolom tertentu dibuat Center (seperti Request, DG, Shelf, NO), sisanya Left
                 const isCenteredCol = [0, 1, 2, 4].includes(C); // Request, DG, Shelf, NO
 
                 ws[cellAddress].s = {
-                    fill: { fgColor: { rgb: isEvenRow ? "DEE0E3" : "FFFFFF" } },
+                    fill: { patternType: "solid", fgColor: { rgb: isEvenRow ? "DEE0E3" : "FFFFFF" } },
                     font: { color: { rgb: "000000" }, name: "Calibri", sz: 10 },
                     alignment: { 
                         horizontal: isCenteredCol ? "center" : "left", 
@@ -146,18 +137,18 @@ export function exportTicketToExcel(ticket) {
         }
     }
 
-    // Atur Tinggi Baris Header agar lega dan rapi
+    // Atur Tinggi Baris Header
     ws['!rows'] = [
-        { hpt: 24 }, // Tinggi Header Row 1
-        { hpt: 20 }  // Tinggi Header Row 2
+        { hpt: 24 }, // Baris 1 Header
+        { hpt: 20 }  // Baris 2 Header
     ];
 
-    // Atur Lebar Kolom (Auto-fit dinamis)
+    // Atur Lebar Kolom Otomatis
     ws['!cols'] = rawColumns.map(col => ({ 
         wch: Math.max(col.title.length, col.sub.length) + 4 
     }));
 
-    // 6. Buat Workbook dan Export File
+    // 5. Buat Workbook dan Export File Excel
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Detail");
 

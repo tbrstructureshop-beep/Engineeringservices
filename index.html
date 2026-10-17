@@ -7,16 +7,22 @@
 
     <script>
         function guardAuth() {
+            // TEKNIK SESSION FLAG: sessionStorage akan otomatis HILANG jika browser/tab ditutup.
+            // Jika sessionStorage tidak ada, berarti ini adalah sesi browser baru.
+            if (!sessionStorage.getItem('active_tab_session')) {
+                // Hapus data login lama secara paksa!
+                localStorage.removeItem('currentUser');
+            }
+
             if (!localStorage.getItem('currentUser')) {
-                // Gunakan replace agar history halaman ini terhapus
+                // Gunakan replace agar history halaman ini terhapus, cegah back button
                 window.location.replace('menu/loginPage.html');
             }
         }
 
-        // 1. Cek langsung saat pertama kali dieksekusi
         guardAuth();
 
-        // 2. Cek saat user menekan tombol Back (menangani Browser BFCache)
+        // Cek saat user menekan tombol Back (menangani Browser BFCache)
         window.addEventListener('pageshow', function (event) {
             guardAuth();
         });

@@ -118,6 +118,8 @@ export async function fetchAllTickets() {
             created_at,
             updated_at,
             closed_at,
+            last_updated_by_name,
+            last_updated_by_unit,
             existing_pn_items (*)
         `)
         .order('created_at', { ascending: false });
@@ -138,6 +140,8 @@ export async function fetchAllTickets() {
         createdAt: t.created_at,   // <-- Tambahkan ini
         updatedAt: t.updated_at,   // <-- Tambahkan ini
         closedAt: t.closed_at,     // <-- Tambahkan ini
+        lastUpdatedByName: t.last_updated_by_name || t.requester_name,
+        lastUpdatedByUnit: t.last_updated_by_unit || t.department,
         pns: (t.existing_pn_items || []).sort((a, b) => a.item_no - b.item_no).map(item => ({
             id: item.id,
             no: item.item_no,
@@ -182,7 +186,9 @@ export async function createTicketWithItems(header, arrayOfPns) {
             status: 'Received',
             requester_emp_id: header.empId || null,
             requester_name: header.requester,
-            department: header.department
+            department: header.department,
+            last_updated_by_name: header.requester,
+            last_updated_by_unit: header.department
         }]);
 
     if (headerErr) {
@@ -263,7 +269,7 @@ export async function createTicketWithItems(header, arrayOfPns) {
 /**
  * Update Tiket & PNs (Menghandle Pergantian Dokumen di GDrive)
  */
-export async function updateTicketAndItems(ticketNo, updatedPns) {
+export async function updateTicketAndItems(ticketNo, updatedPns, updater = null) {
     // 1. Ambil item lama untuk referensi file ID yang ada sebelumnya
     const { data: oldItems } = await supabase
         .from('existing_pn_items')
@@ -320,10 +326,16 @@ export async function updateTicketAndItems(ticketNo, updatedPns) {
         });
     }
 
-    // 3. Update waktu header tiket agar updated_at tercatat
+    // 3. Update waktu dan catat siapa & unit yang barusan mengedit tiket
+    const headerUpdatePayload = { updated_at: new Date().toISOString() };
+    if (updater) {
+        headerUpdatePayload.last_updated_by_name = updater.name || 'User';
+        headerUpdatePayload.last_updated_by_unit = updater.unit || '-';
+    }
+
     await supabase
         .from('existing_pn_tickets')
-        .update({ updated_at: new Date().toISOString() })
+        .update(headerUpdatePayload)
         .eq('ticket_no', ticketNo);
 
     // 4. Re-sync detail items (Hapus lama lalu masukkan yang baru diperbarui)

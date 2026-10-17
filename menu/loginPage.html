@@ -419,6 +419,9 @@
                 status: user.status
             };
             localStorage.setItem('currentUser', JSON.stringify(sessionData));
+            
+            // Tanamkan Bendera Sesi Aktif (Akan hancur saat browser ditutup)
+            sessionStorage.setItem('active_tab_session', 'true');
 
             Swal.fire({
                 icon: 'success',

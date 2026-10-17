@@ -1,23 +1,18 @@
 // File: menu/getExcelFile/existingNewPN.js
-import { SheetJS } from 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/xlsx.full.min.js';
 
-export function exportExistingPNTicketToExcel(ticketData) {
-    if (!ticketData || !ticketData.ticketNo) {
+export function exportTicketToExcel(ticket) {
+    if (!ticket || !ticket.pns) {
         alert('Data tiket tidak valid untuk diexport.');
         return;
     }
 
-    const ticketNo = ticketData.ticketNo;
-    const requesterName = ticketData.requester || '-';
-    const items = ticketData.pns || [];
-
-    // 1. Definisikan Header (Requester disisipkan di antara Shelf Life dan NO)
+    // 1. Definisikan Header (Sama persis dengan urutan entryExistingPNModal, dengan sisipan Requester di antara Shelf Life & NO)
     const headers = [
         "ACT",
         "Request",
         "Dangerous Good",
         "Shelf Life",
-        "Requester", // <-- Disisipkan di sini
+        "Requester", // <-- Sisipan posisinya di sini
         "NO",
         "MATERIAL TYPE (MATL_TYPE)",
         "MATERIAL DESCRIPTION (SHORT TEXT) (MATL_DESC)",
@@ -26,7 +21,7 @@ export function exportExistingPNTicketToExcel(ticketData) {
         "NUMBER OF A MANUFACTURER (MFR NO (CAGE CODE))",
         "DOCUMENT NUMBER (DOCUMENT)",
         "UNSERVICEABLE PLANT (ZZUWERKS)",
-        "UNSERVICEABLE STORAGE LOCATION (ZZULGORT)",
+        "UNSERSABLE STORAGE LOCATION (ZZULGORT)",
         "REFURBISHMENT PLANT (ZZRWERKS)",
         "REFURBISHMENT ISSUE STORAGE LOCATION (ZZRILGORT)",
         "REFURBISHMENT RECEIPT STORAGE LOCATION (ZZRRLGORT)",
@@ -39,102 +34,82 @@ export function exportExistingPNTicketToExcel(ticketData) {
     ];
 
     // 2. Susun Data Body Baris per Baris
-    const rows = items.map((item, index) => {
-        const docName = item.doc || '';
-        const docUrl = item.gdriveUrl || '';
-
-        // Format Hyperlink Excel SheetJS (jika ada URL Google Drive)
-        let docCell = docName;
-        if (docUrl && docName) {
-            docCell = { t: 's', v: docName, l: { Target: docUrl, Tooltip: 'Buka Dokumen di Google Drive' } };
+    const rows = ticket.pns.map((p, idx) => {
+        // Format Hyperlink Excel untuk Google Drive jika gdriveUrl tersedia
+        let docCell = p.doc || '';
+        if (p.gdriveUrl) {
+            docCell = { t: 's', v: p.doc || 'VIEW DOCUMENT', l: { Target: p.gdriveUrl, Tooltip: 'Klik untuk membuka dokumen di Google Drive' } };
         }
 
         return [
-            "-", // ACT
-            item.request || "EXISTING PN",
-            item.dangerous || "NO",
-            item.shelf || "NO",
-            requesterName, // <-- Nilai Requester
-            item.no || (index + 1),
-            item.type || "",
-            item.desc || "",
-            item.uom || "",
-            item.pn || "",
-            item.mfr || "",
-            docCell, // <-- Kolom Dokumen (Hyperlink)
-            item.uplant || "",
-            item.uloc || "",
-            item.rplant || "",
-            item.riss || "",
-            item.rrec || "",
-            item.pshop || "",
-            item.pplant || "",
-            item.sloc || "",
-            item.ac || "",
-            item.pur || "",
-            item.reg || ""
+            "-",                          // ACT
+            p.request || "EXISTING PN",   // Request
+            p.dangerous || "NO",          // Dangerous Good
+            p.shelf || "NO",              // Shelf Life
+            ticket.requester || "-",      // Requester (Sisipan)
+            p.no || (idx + 1),            // NO
+            p.type || "",                 // MATL_TYPE
+            p.desc || "",                 // MATL_DESC
+            p.uom || "",                  // BASE_OUM
+            p.pn || "",                   // MANU_MAT (PN)
+            p.mfr || "",                  // MFR NO
+            docCell,                      // DOCUMENT (Dengan Hyperlink)
+            p.uplant || "",               // ZZUWERKS
+            p.uloc || "",                 // ZZULGORT
+            p.rplant || "",               // ZZRWERKS
+            p.riss || "",                 // ZZRILGORT
+            p.rrec || "",                 // ZZRRLGORT
+            p.pshop || "",                // ZZRARBPL
+            p.pplant || "",               // ZZPWERKS
+            p.sloc || "",                 // ZZSLGORT
+            p.ac || "",                   // ZZEQART
+            p.pur || "",                  // EKGRP
+            p.reg || ""                   // Reg
         ];
     });
 
-    // Gabungkan Header dan Rows ke Worksheet
-    const wsData = [headers, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    // Gabungkan Header dan Rows menjadi 1 array data worksheet
+    const sheetData = [headers, ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
-    // 3. Styling Excel (Header #203d6b Teks Putih & Zebra Body #dee0e3 / Putih)
+    // 3. Styling Excel (Header Navy #203d6b Teks Putih, Body Zebra Putih & #dee0e3 Font Hitam)
     const range = XLSX.utils.decode_range(ws['!ref']);
     
-    ws['!rows'] = [{ hpt: 26 }]; // Tinggi baris header
-
     for (let R = range.s.r; R <= range.e.r; ++R) {
         for (let C = range.s.c; C <= range.e.c; ++C) {
             const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
             if (!ws[cellAddress]) continue;
 
-            // Inisialisasi objek style jika belum ada
-            if (!ws[cellAddress].s) ws[cellAddress].s = {};
+            // Inisialisasi object s (style) jika belum ada
+            ws[cellAddress].s = ws[cellAddress].s || {};
 
             if (R === 0) {
-                // Styling Header: Background #203d6b, Teks Putih Bold, Center Alignment
+                // Styling Header
                 ws[cellAddress].s = {
-                    fill: { fgColor: { rgb: "203D6B" } },
-                    font: { name: "Inter", sz: 10, bold: true, color: { rgb: "FFFFFF" } },
+                    fill: { fgColor: { rgb: "203D6B" } }, // Navy #203d6b
+                    font: { color: { rgb: "FFFFFF" }, bold: true, name: "Calibri", sz: 11 },
                     alignment: { horizontal: "center", vertical: "center", wrapText: true }
                 };
             } else {
-                // Styling Body: Zebra Background (#dee0e3 dan putih), Teks Hitam
-                const isEvenRow = (R % 2 === 0);
+                // Styling Body Zebra (#dee0e3 untuk baris genap, putih untuk ganjil)
+                const isEvenRow = R % 2 === 0;
                 ws[cellAddress].s = {
                     fill: { fgColor: { rgb: isEvenRow ? "DEE0E3" : "FFFFFF" } },
-                    font: { name: "Inter", sz: 9, color: { rgb: "000000" } },
+                    font: { color: { rgb: "000000" }, name: "Calibri", sz: 10 },
                     alignment: { vertical: "center" }
                 };
-
-                // Jika sel dokumen adalah hyperlink, beri warna biru dan underline tipis
-                if (C === 11 && ws[cellAddress].l) {
-                    ws[cellAddress].s.font.color = { rgb: "2563EB" };
-                    ws[cellAddress].s.font.underline = true;
-                }
             }
         }
     }
 
-    // Auto-fit Lebar Kolom agar tidak terpotong (Truncated)
-    const colWidths = headers.map((h, i) => {
-        let maxLen = h.length;
-        rows.forEach(r => {
-            const val = r[i];
-            const strVal = typeof val === 'object' && val !== null ? (val.v || '') : String(val || '');
-            if (strVal.length > maxLen) maxLen = strVal.length;
-        });
-        return { wch: Math.min(Math.max(maxLen + 3, 12), 45) };
-    });
-    ws['!cols'] = colWidths;
+    // Atur Lebar Kolom agar tidak terpotong (Auto-fit sederhana)
+    ws['!cols'] = headers.map(h => ({ wch: Math.max(h.length + 3, 15) }));
 
-    // 4. Buat Workbook dan Unduh File
+    // 4. Buat Workbook dan Export File
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Detail");
 
-    // Format nama file: "Existing New PN Ticket No. [Nomor Tiket].xlsx"
-    const fileName = `Existing New PN Ticket No. ${ticketNo}.xlsx`;
+    // Nama File sesuai format permintaan: "Existing New PN Ticket No. [Nomor Tiket].xlsx"
+    const fileName = `Existing New PN Ticket No. ${ticket.ticketNo}.xlsx`;
     XLSX.writeFile(wb, fileName);
 }

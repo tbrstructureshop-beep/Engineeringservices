@@ -42,7 +42,13 @@ export function render(container) {
                 <h3 class="card-title" style="margin-bottom: 5px;"><i class="ph ph-hard-drives"></i> Existing Part Number Tickets</h3>
                 <p style="font-size: 0.85rem; color: var(--text-muted);">Manage material tracking by Ticket.</p>
             </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <!-- Global Quick Search Bar -->
+                <div style="position: relative; display: flex; align-items: center;">
+                    <i class="ph ph-magnifying-glass" style="position: absolute; left: 10px; color: var(--text-muted); font-size: 1rem; pointer-events: none;"></i>
+                    <input type="text" id="global-search-input" placeholder="Quick search ticket / PN..." style="padding: 8px 12px 8px 32px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-card); color: var(--text-main); font-size: 0.85rem; outline: none; width: 220px; transition: 0.2s;">
+                </div>
+                
                 <button type="button" id="btn-toggle-filter-mode" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); padding: 9px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;">
                     <i class="ph ph-funnel" style="font-size: 1.1rem; color: var(--primary);"></i> <span id="label-filter-mode">Filter Mode</span>
                 </button>
@@ -97,6 +103,7 @@ export function render(container) {
 
     let ticketData = [];
     let activeFilterTicket = null;
+    let globalSearchKeyword = '';
 
     const filterManager = new ExistingPNFilterManager({
         onFilterApplied: () => {
@@ -145,7 +152,21 @@ export function render(container) {
         // Terapkan filter jika ada
         let filteredDataset = filterManager.getFilteredData();
 
-        // 2. Terapkan Filter Notifikasi (jika ada tiket yang diklik dari lonceng)
+        // 2. Terapkan Quick Search Bar Global (Normalized Case)
+        if (globalSearchKeyword) {
+            const kw = globalSearchKeyword.toLowerCase().trim();
+            filteredDataset = filteredDataset.filter(row => {
+                const pnsStr = (row.pns || []).map(p => p.pn).join(' ').toLowerCase();
+                return (row.ticketNo && row.ticketNo.toLowerCase().includes(kw)) ||
+                       (row.status && row.status.toLowerCase().includes(kw)) ||
+                       (row.request && row.request.toLowerCase().includes(kw)) ||
+                       (row.requester && row.requester.toLowerCase().includes(kw)) ||
+                       (row.dept && row.dept.toLowerCase().includes(kw)) ||
+                       pnsStr.includes(kw);
+            });
+        }
+
+        // 3. Terapkan Filter Notifikasi (jika ada tiket yang diklik dari lonceng)
         const displayedTickets = activeFilterTicket 
             ? filteredDataset.filter(t => t.ticketNo === activeFilterTicket)
             : filteredDataset;
@@ -519,13 +540,24 @@ export function render(container) {
 
             if (isActive) {
                 btnToggleFilter.style.borderColor = 'var(--primary)';
-                btnToggleFilter.style.background = '#eff6ff';
+                btnToggleFilter.style.background = 'rgba(37, 99, 235, 0.15)'; // Adaptif gelap & terang
+                btnToggleFilter.style.color = 'var(--primary)';
                 labelFilterMode.textContent = 'Exit Filter Mode';
             } else {
                 btnToggleFilter.style.borderColor = 'var(--border-color)';
                 btnToggleFilter.style.background = 'var(--bg-card)';
+                btnToggleFilter.style.color = 'var(--text-main)';
                 labelFilterMode.textContent = 'Filter Mode';
             }
+        });
+    }
+
+    // Event Listener Quick Search Bar
+    const globalSearchInput = document.getElementById('global-search-input');
+    if (globalSearchInput) {
+        globalSearchInput.addEventListener('input', (e) => {
+            globalSearchKeyword = e.target.value;
+            renderTable();
         });
     }
 

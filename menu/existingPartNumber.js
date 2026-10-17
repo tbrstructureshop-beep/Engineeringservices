@@ -128,7 +128,10 @@ export function render(container) {
                     </span>
                 </td>
                 <td><span class="status-badge badge-gray">${row.request}</span></td>
-                <td>${row.requester}</td>
+                <td>
+                    <b>${row.requester}</b>
+                    <div style="font-size: 0.72rem; color: var(--primary); font-weight: 600;">Unit: ${row.dept || '-'}</div>
+                </td>
                 <td><div class="pn-list">${pnListHTML || '-'}</div></td>
 
                 <!-- KOLOM TIMELINE BARU -->
@@ -286,6 +289,8 @@ export function render(container) {
                 ticketNo: ticket.ticketNo, 
                 requester: ticket.requester, 
                 department: ticket.dept,
+                lastUpdatedByName: ticket.lastUpdatedByName || ticket.requester,
+                lastUpdatedByUnit: ticket.lastUpdatedByUnit || ticket.dept,
                 createdAt: ticket.createdAt,
                 updatedAt: ticket.updatedAt,
                 closedAt: ticket.closedAt
@@ -304,7 +309,10 @@ export function render(container) {
                 });
 
                 try {
-                    await updateTicketAndItems(ticket.ticketNo, updatedPns);
+                    await updateTicketAndItems(ticket.ticketNo, updatedPns, {
+                        name: activeUser.name,
+                        unit: activeUser.unit
+                    });
                     await loadData(); // Refresh data riil dari Supabase
                     Swal.fire({ 
                         icon: 'success', 
@@ -327,64 +335,14 @@ export function render(container) {
     });
 
 
-    // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE
-    document.getElementById('dd-delete').addEventListener('click', () => {
-        const ticket = ticketData[activeDropdownIndex];
-
-        // --- CEK OTORISASI ROLE ---
-        let activeUser = { role: 'Requester', unit: '-' };
-        try { const stored = localStorage.getItem('currentUser'); if (stored) activeUser = JSON.parse(stored); } catch (e) {}
-        const isTed = (activeUser.role && activeUser.role.toUpperCase().includes('TED')) || (activeUser.unit && activeUser.unit.toUpperCase().includes('TED'));
-
-        // Cegah hapus jika tiket sudah diproses (Under Evaluation / Created) oleh non-TED
-        if (!isTed && (ticket.status === 'Under Evaluation' || ticket.status === 'Created')) {
-            Swal.fire({ 
-                icon: 'error', 
-                title: 'Akses Ditolak', 
-                text: `Tiket berstatus '${ticket.status}' sudah dikunci dan tidak dapat dihapus oleh Unit Pengaju.`, 
-                background: 'var(--bg-card)', color: 'var(--text-main)' 
-            });
-            return;
-        }
-        // --------------------------
-
-        Swal.fire({
-            title: 'Delete Ticket?',
-            text: `Hapus tiket ${ticket.ticketNo}? Seluruh file lampiran di Google Drive juga akan dihapus.`,
-            icon: 'warning', 
-            showCancelButton: true, 
-            confirmButtonColor: '#ef4444',
-            background: 'var(--bg-card)', color: 'var(--text-main)'
-        }).then(async (res) => {
-            if (res.isConfirmed) {
-                Swal.fire({
-                    title: 'Menghapus Tiket...',
-                    text: 'Sedang membersihkan database & file Google Drive...',
-                    allowOutsideClick: false,
-                    didOpen: () => Swal.showLoading(),
-                    background: 'var(--bg-card)', color: 'var(--text-main)'
-                });
-
-                try {
-                    await deleteTicketCompletely(ticket.ticketNo);
-                    await loadData();
-                    Swal.fire({ icon: 'success', title: 'Terhapus!', text: 'Tiket berhasil dihapus.', timer: 1500, showConfirmButton: false });
-                } catch (err) {
-                    console.error('Delete error:', err);
-                    Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: err.message });
-                }
-            }
-        });
-    });
-
-    // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE
+    // 6. DELETE TIKET LENGKAP DENGAN FILE GDRIVE (VERSI VALIDASI JIT TERBARU)
     document.getElementById('dd-delete').addEventListener('click', async () => {
         const ticket = ticketData[activeDropdownIndex];
 
         // --- VALIDASI JUST-IN-TIME (Mencegah Stale Data) ---
         Swal.fire({ title: 'Memeriksa status tiket...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: 'var(--bg-card)', color: 'var(--text-main)' });
         
-        // Tarik status paling update detik ini
+        // Tarik status paling update detik ini dari database
         const { data: freshData, error: fetchErr } = await supabase
             .from('existing_pn_tickets')
             .select('status')
@@ -439,6 +397,39 @@ export function render(container) {
                 } catch (err) {
                     console.error('Delete error:', err);
                     Swal.fire({ icon: 'error', title: 'Gagal Menghapus', text: err.message });
+                }
+            }
+        });
+    });
+
+    // 7. INPUT TIKET BARU (UPLOAD KE GDRIVE + SUPABASE)
+    document.getElementById('btn-add-pn').addEventListener('click', () => {
+        const randomTicket = Math.floor(100000 + Math.random() * 900000).toString();
+
+        let activeUser = { name: 'User', unit: '-', empId: null };
+        try {
+            const stored = localStorage.getItem('currentUser');
+            if (stored) activeUser = JSON.parse(stored);
+        } catch (e) {}
+
+        openEntryModal({
+            title: '<i class="ph ph-hard-drives"></i> Create New PN Ticket',
+            headerData: { 
+                ticketNo: randomTicket, 
+                requester: activeUser.name || 'User', 
+                department: activeUser.unit || '-',
+                empId: activeUser.empId || null
+            },
+            initialData: [],
+            isReadOnly: false,
+            onSubmit: async (arrayOfPns, header) => {
+                Swal.fire({ title: 'Menyimpan Tiket Baru...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), background: 'var(--bg-card)', color: 'var(--text-main)' });
+                try {
+                    await createTicketWithItems(header, arrayOfPns);
+                    await loadData();
+                    Swal.fire({ icon: 'success', title: 'Tiket Berhasil Dibuat!', timer: 1500, showConfirmButton: false, background: 'var(--bg-card)', color: 'var(--text-main)' });
+                } catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Gagal Menyimpan Tiket', text: err.message, background: 'var(--bg-card)', color: 'var(--text-main)' });
                 }
             }
         });

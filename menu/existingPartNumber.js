@@ -8,6 +8,8 @@ import {
     updateTicketAndItems, 
     deleteTicketCompletely 
 } from '../config/Transaction/existingPN.js';
+import { createNotification } from '../config/notification.js';
+
 
 export function render(container) {
     container.innerHTML = `
@@ -196,7 +198,7 @@ export function render(container) {
             const targetTicket = ticketData[idx];
 
             // --- CEK OTORISASI ROLE ---
-            let activeUser = { role: 'Requester', unit: '-' };
+            let activeUser = { name: 'Admin', role: 'Requester', unit: '-' };
             try { const stored = localStorage.getItem('currentUser'); if (stored) activeUser = JSON.parse(stored); } catch (e) {}
             const isTed = (activeUser.role && activeUser.role.toUpperCase().includes('TED')) || (activeUser.unit && activeUser.unit.toUpperCase().includes('TED'));
 
@@ -230,6 +232,22 @@ export function render(container) {
                         targetTicket.status = res.value; 
                         renderTable(); 
                         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: `Status set to ${res.value}`, showConfirmButton: false, timer: 1500 });
+
+                        // --- PEMICU NOTIFIKASI KE UNIT PENGAJU ---
+                        const isCompleted = res.value === 'Created';
+                        await createNotification({
+                            serviceType: 'EXISTING_PN',
+                            ticketNo: targetTicket.ticketNo,
+                            senderName: activeUser.name || 'Admin',
+                            senderUnit: activeUser.unit || 'TED-2',
+                            targetUnit: targetTicket.dept, // Dikirim balik ke unit pengaju tiket tersebut
+                            title: isCompleted ? 'Existing PN Created on SAP' : `Ticket Status: ${res.value}`,
+                            message: isCompleted 
+                                ? `Your Existing PN Request Ticket #${targetTicket.ticketNo} Already Completed and Created on SAP`
+                                : `Your Existing PN Request Ticket #${targetTicket.ticketNo} Updated By ${activeUser.unit || 'TED-2'} (${res.value}) check for detail`
+                        });
+                        // ------------------------------------------
+
                     } else {
                         Swal.fire({ icon: 'error', title: 'Gagal Ubah Status', text: error.message });
                     }

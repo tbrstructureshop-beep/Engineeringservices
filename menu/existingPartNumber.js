@@ -10,6 +10,7 @@ import {
 } from '../config/Transaction/existingPN.js';
 import { createNotification } from '../config/notification.js';
 import { ExistingPNFilterManager } from './searchAndFilters/ExistingNewPN.js';
+import { exportTicketToExcel } from './getExcelFile/existingNewPN.js';
 
 export function render(container) {
     container.innerHTML = `

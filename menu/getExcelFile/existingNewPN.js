@@ -45,7 +45,7 @@ export function exportTicketToExcel(ticket) {
         }
     });
 
-    // 2. Susun Data Body Baris per Baris
+    // 2. Susun Data Body Baris per Baris (Urutan wajib sama persis dengan jumlah rawColumns)
     const rows = ticket.pns.map((p, idx) => {
         let docCell = p.doc || '';
         if (p.gdriveUrl) {
@@ -53,28 +53,28 @@ export function exportTicketToExcel(ticket) {
         }
 
         return [
-            p.request || "EXISTING PN",   // Request
-            p.dangerous || "NO",          // Dangerous Good
-            p.shelf || "NO",              // Shelf Life
-            ticket.requester || "-",      // Requester
-            p.no || (idx + 1),            // NO
-            p.type || "",                 // MATL_TYPE
-            p.desc || "",                 // MATL_DESC
-            p.uom || "",                  // BASE_OUM
-            p.pn || "",                   // MANU_MAT (PN)
-            p.mfr || "",                  // MFR NO
-            docCell,                      // DOCUMENT (Hyperlink aktif)
-            p.uplant || "",               // ZZUWERKS
-            p.uloc || "",                 // ZZULGORT
-            p.rplant || "",               // ZZRWERKS
-            p.riss || "",                 // ZZRILGORT
-            p.rrec || "",                 // ZZRRLGORT
-            p.pshop || "",                // ZZRARBPL
-            p.pplant || "",               // ZZPWERKS
-            p.sloc || "",                 // ZZSLGORT
-            p.ac || "",                   // ZZEQART
-            p.pur || "",                  // EKGRP
-            p.reg || ""                   // Reg
+            p.request || "EXISTING PN",   // 1. Request
+            p.dangerous || "NO",          // 2. Dangerous Good
+            p.shelf || "NO",              // 3. Shelf Life
+            ticket.requester || "-",      // 4. Requester (Sisipan)
+            p.no || (idx + 1),            // 5. NO
+            p.type || "",                 // 6. MATERIAL TYPE
+            p.desc || "",                 // 7. MATERIAL DESCRIPTION
+            p.uom || "",                  // 8. BASE UNIT OF MEASURE
+            p.pn || "",                   // 9. MANUFACTURER PART NUMBER
+            p.mfr || "",                  // 10. NUMBER OF A MANUFACTURER
+            docCell,                      // 11. DOCUMENT NUMBER (Hyperlink aktif)
+            p.uplant || "",               // 12. UNSERVICEABLE PLANT
+            p.uloc || "",                 // 13. UNSERSABLE STORAGE LOCATION
+            p.rplant || "",               // 14. REFURBISHMENT PLANT
+            p.riss || "",                 // 15. REFURBISHMENT ISSUE STORAGE LOCATION
+            p.rrec || "",                 // 16. REFURBISHMENT RECEIPT STORAGE LOCATION
+            p.pshop || "",                // 17. PARENT SHOP
+            p.pplant || "",               // 18. PARENT SHOP PLANT
+            p.sloc || "",                 // 19. SERVICEABLE STORE LOCATION
+            p.ac || "",                   // 20. TYPE OF TECHNICAL OBJECT
+            p.pur || "",                  // 21. PURCHASING GROUP
+            p.reg || ""                   // 22. AIRCRAFT REGISTRATION
         ];
     });
 

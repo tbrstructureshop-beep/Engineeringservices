@@ -1,5 +1,6 @@
 // File: config/Transaction/commentExistingPN.js
 import { supabase } from '../user/supabaseClient.js';
+import { createNotification } from '../notification.js';
 
 export async function fetchComments(ticketNo) {
     const { data, error } = await supabase
@@ -19,6 +20,7 @@ export async function addComment({ ticketNo, user }) {
     const isTed = (user.role && user.role.toUpperCase().includes('TED')) || 
                   (user.unit && user.unit.toUpperCase().includes('TED'));
 
+    // 1. Simpan Komentar ke Database
     const { data, error } = await supabase
         .from('existing_pn_comments')
         .insert([{
@@ -38,6 +40,38 @@ export async function addComment({ ticketNo, user }) {
         console.error('Error adding comment:', error);
         throw error;
     }
+
+    // 2. Tentukan Penerima Notifikasi Secara Otomatis & Dinamis
+    try {
+        let targetUnitNotif = 'TED-2'; // Default: jika pengirim adalah Requester, dikirim ke Admin TED-2
+
+        if (isTed) {
+            // Jika yang berkomentar adalah TED-2, cari siapa unit asli pembuat tiket ini dari database
+            const { data: ticketData } = await supabase
+                .from('existing_pn_tickets')
+                .select('department')
+                .eq('ticket_no', ticketNo)
+                .single();
+
+            if (ticketData && ticketData.department) {
+                targetUnitNotif = ticketData.department; // Otomatis terisi unit pengaju asli (e.g. TCP-12, TCR-1, dll)
+            }
+        }
+
+        // 3. Kirim Notifikasi
+        await createNotification({
+            serviceType: 'EXISTING_PN',
+            ticketNo: ticketNo,
+            senderName: user.name || 'User',
+            senderUnit: user.unit || '-',
+            targetUnit: targetUnitNotif,
+            title: 'New Comment Added',
+            message: `${user.unit || 'User'} (${user.name || 'User'}) Sent Comment related to Ticket #${ticketNo}. See for Detail.`
+        });
+    } catch (notifErr) {
+        console.warn('Gagal memicu notifikasi komentar:', notifErr);
+    }
+
     return data;
 }
 

@@ -48,7 +48,17 @@ export function render(container) {
         </div>
 
         <div class="card">
-            <h3 class="card-title"><i class="ph ph-table"></i> Dashboard Tiket SAP</h3>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                <h3 class="card-title" style="margin-bottom: 0;"><i class="ph ph-table"></i> Dashboard Tiket SAP</h3>
+                <div id="filter-indicator-box" style="display: none; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.8rem; background: #eff6ff; color: var(--primary); padding: 4px 10px; border-radius: 6px; font-weight: 600; border: 1px solid #bfdbfe;">
+                        <i class="ph ph-funnel"></i> Filter: <b id="filter-ticket-label">#</b>
+                    </span>
+                    <button type="button" id="btn-reset-filter" style="background: none; border: 1px solid var(--border-color); color: #ef4444; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 4px;">
+                        <i class="ph ph-x-circle"></i> Clear Filter
+                    </button>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="data-table" id="table-pn" style="min-width: 100%;">
                     <thead>
@@ -81,6 +91,7 @@ export function render(container) {
     `;
 
     let ticketData = [];
+    let activeFilterTicket = null;
 
     // 1. STYLING STATUS
     function getStatusStyle(status) {
@@ -108,23 +119,47 @@ export function render(container) {
         const tbody = document.getElementById('tbody-pn');
         tbody.innerHTML = ''; 
 
-        if (ticketData.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 25px; color: var(--text-muted);">Belum ada tiket tersimpan.</td></tr>`;
+        // Update tampilan indikator filter di atas tabel
+        const filterBox = document.getElementById('filter-indicator-box');
+        const filterLabel = document.getElementById('filter-ticket-label');
+        if (filterBox && filterLabel) {
+            if (activeFilterTicket) {
+                filterBox.style.display = 'flex';
+                filterLabel.textContent = '#' + activeFilterTicket;
+            } else {
+                filterBox.style.display = 'none';
+            }
+        }
+
+        // Terapkan filter jika ada
+        const displayedTickets = activeFilterTicket 
+            ? ticketData.filter(t => t.ticketNo === activeFilterTicket)
+            : ticketData;
+
+        if (displayedTickets.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 25px; color: var(--text-muted);">${activeFilterTicket ? `Tiket #${activeFilterTicket} tidak ditemukan di database.` : 'Belum ada tiket tersimpan.'}</td></tr>`;
             return;
         }
 
-        ticketData.forEach((row, index) => {
+        displayedTickets.forEach((row) => {
+            // Ambil index asli dari ticketData agar aksi edit/status tetap akurat saat difilter
+            const originalIndex = ticketData.indexOf(row);
             const pnListHTML = (row.pns || []).map(p => `<span class="pn-badge">${p.pn}</span>`).join('');
 
+            // Beri sorotan latar jika baris ini berasal dari klik notifikasi
+            const isHighlighted = activeFilterTicket && row.ticketNo === activeFilterTicket;
+            const highlightStyle = isHighlighted ? 'background-color: rgba(37, 99, 235, 0.05);' : '';
+
             const tr = document.createElement('tr');
+            tr.style.cssText = highlightStyle;
             tr.innerHTML = `
                 <td style="text-align:center;">
-                    <button class="action-btn drop-trigger" data-index="${index}">
+                    <button class="action-btn drop-trigger" data-index="${originalIndex}">
                         <i class="ph ph-dots-three-outline-vertical"></i>
                     </button>
                 </td>
                 <td style="font-weight: 700; color: var(--primary);">${row.ticketNo}</td>
-                <td style="cursor: pointer;" class="btn-status" data-index="${index}" title="Click to Change Status">
+                <td style="cursor: pointer;" class="btn-status" data-index="${originalIndex}" title="Click to Change Status">
                     <span class="status-badge" style="${getStatusStyle(row.status)}">
                         ${row.status} <i class="ph ph-pencil-simple" style="font-size:0.7rem;"></i>
                     </span>
@@ -136,18 +171,17 @@ export function render(container) {
                 </td>
                 <td><div class="pn-list">${pnListHTML || '-'}</div></td>
 
-                <!-- KOLOM TIMELINE BARU -->
+                <!-- KOLOM TIMELINE -->
                 <td style="font-size: 0.75rem; line-height: 1.4; color: var(--text-muted); white-space: nowrap;">
                     <div><i class="ph ph-calendar-plus" style="color:var(--primary);"></i> <b>Sub:</b> ${formatDateTime(row.createdAt)}</div>
                     <div><i class="ph ph-clock-clockwise" style="color:#f59e0b;"></i> <b>Upd:</b> ${formatDateTime(row.updatedAt)}</div>
                     ${row.closedAt ? `<div><i class="ph ph-check-circle" style="color:#10b981;"></i> <b>Closed:</b> ${formatDateTime(row.closedAt)}</div>` : ''}
                 </td>
-
             `;
             tbody.appendChild(tr);
         });
     }
-
+    
     // 3. LOAD DATA DARI SUPABASE
     async function loadData() {
         try {
@@ -451,5 +485,20 @@ export function render(container) {
                 }
             }
         });
+    });
+    const btnResetFilter = document.getElementById('btn-reset-filter');
+    if (btnResetFilter) {
+        btnResetFilter.addEventListener('click', () => {
+            activeFilterTicket = null;
+            renderTable();
+        });
+    }
+
+    // Tangkap sinyal klik notifikasi dari luar modul
+    window.addEventListener('filter-ticket', (e) => {
+        if (e.detail && e.detail.ticketNo) {
+            activeFilterTicket = e.detail.ticketNo;
+            renderTable();
+        }
     });
 }

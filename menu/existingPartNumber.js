@@ -337,6 +337,14 @@ export function render(container) {
         openNotifModal(ticket);
     });
 
+    // Event Listener Download File Excel
+    document.getElementById('dd-excel').addEventListener('click', () => {
+        const ticket = ticketData[activeDropdownIndex];
+        if (ticket) {
+            exportTicketToExcel(ticket);
+        }
+    });
+
     // 5. DETAIL VIEW / EDIT MODAL
     document.getElementById('dd-detail').addEventListener('click', async () => {
         const ticket = ticketData[activeDropdownIndex];

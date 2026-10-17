@@ -18,14 +18,41 @@ export class ExistingPNFilterManager {
         const style = document.createElement('style');
         style.id = 'gsheet-filter-style';
         style.innerHTML = `
-            .th-filter-wrapper { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; position: relative; }
-            .th-filter-btn {
-                background: none; border: 1px solid transparent; color: var(--text-muted);
-                border-radius: 4px; padding: 2px 4px; cursor: pointer; display: inline-flex;
-                align-items: center; justify-content: center; font-size: 0.95rem; transition: 0.2s;
+            /* Perbaikan: Icon corong menempel persis di sebelah teks judul (tidak terlempar ke kanan) */
+            .th-filter-wrapper { 
+                display: inline-flex; 
+                align-items: center; 
+                gap: 8px; 
+                width: auto; 
+                position: relative; 
+                vertical-align: middle; 
             }
-            .th-filter-btn:hover { background: var(--bg-main); color: var(--primary); }
-            .th-filter-btn.filtered { color: var(--primary); background: #eff6ff; border-color: #bfdbfe; font-weight: 700; }
+            .th-filter-btn {
+                background: var(--bg-card); 
+                border: 1px solid var(--border-color); 
+                color: var(--text-muted);
+                border-radius: 4px; 
+                width: 22px;
+                height: 22px;
+                cursor: pointer; 
+                display: inline-flex;
+                align-items: center; 
+                justify-content: center; 
+                font-size: 0.85rem; 
+                transition: 0.2s;
+            }
+            .th-filter-btn:hover { 
+                background: var(--bg-main); 
+                color: var(--primary); 
+                border-color: var(--primary);
+            }
+            /* Warna aktif yang ramah Dark Mode & Light Mode */
+            .th-filter-btn.filtered { 
+                color: #3b82f6 !important; 
+                background: rgba(37, 99, 235, 0.15) !important; 
+                border-color: rgba(37, 99, 235, 0.4) !important; 
+                font-weight: 700; 
+            }
             
             /* Popover Dropdown ala Google Sheets */
             .gsheet-dropdown {

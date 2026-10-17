@@ -52,6 +52,9 @@ export function render(container) {
                 <button type="button" id="btn-toggle-filter-mode" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); padding: 9px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;">
                     <i class="ph ph-funnel" style="font-size: 1.1rem; color: var(--primary);"></i> <span id="label-filter-mode">Filter Mode</span>
                 </button>
+                <button type="button" id="btn-open-analytics" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-main); padding: 9px 14px; border-radius: 6px; font-weight: 600; font-size: 0.85rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;">
+                    <i class="ph ph-chart-pie-slice" style="font-size: 1.1rem; color: #8b5cf6;"></i> Analytics
+                </button>
                 <button id="btn-add-pn" class="btn-submit" style="margin-top: 0;">
                     <i class="ph ph-plus-circle"></i> Input New Data
                 </button>
@@ -558,6 +561,16 @@ export function render(container) {
         globalSearchInput.addEventListener('input', (e) => {
             globalSearchKeyword = e.target.value;
             renderTable();
+        });
+    }
+
+    const btnAnalytics = document.getElementById('btn-open-analytics');
+    if (btnAnalytics) {
+        btnAnalytics.addEventListener('click', async () => {
+            const { render: renderAnalytics } = await import('./analytics/existingNewPN.js');
+            const container = document.getElementById('app-container');
+            document.getElementById('page-title').textContent = 'Existing PN Analytics & Statistics';
+            renderAnalytics(container);
         });
     }
 

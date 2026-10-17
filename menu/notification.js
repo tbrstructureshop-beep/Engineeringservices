@@ -109,7 +109,7 @@ export async function openNotificationModal(currentUser, onUpdateBadge) {
             const isUnread = n.target_unit === currentUser.unit && (!n.read_by || !n.read_by.includes(currentUser.empId));
             const iconCfg = getIconConfig(n.title, n.message);
             return `
-                <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${n.id}">
+                <div class="notif-item ${isUnread ? 'unread' : ''}" data-id="${n.id}" data-ticket="${n.ticket_no}" data-service="${n.service_type || 'EXISTING_PN'}">
                     <div class="notif-icon-box ${iconCfg.class}">
                         <i class="ph ${iconCfg.icon}"></i>
                     </div>
@@ -129,9 +129,24 @@ export async function openNotificationModal(currentUser, onUpdateBadge) {
         listBox.querySelectorAll('.notif-item').forEach(el => {
             el.addEventListener('click', async () => {
                 const notifId = el.getAttribute('data-id');
+                const ticketNo = el.getAttribute('data-ticket');
+                const serviceType = el.getAttribute('data-service') || 'EXISTING_PN';
+
                 await markNotificationAsRead(notifId, currentUser.empId);
                 el.classList.remove('unread');
                 if (onUpdateBadge) onUpdateBadge();
+
+                // 1. Tutup modal notifikasi
+                if (document.body.contains(overlay)) {
+                    document.body.removeChild(overlay);
+                }
+
+                // 2. Picu event filter ke dashboard
+                if (ticketNo) {
+                    window.dispatchEvent(new CustomEvent('filter-ticket', {
+                        detail: { ticketNo, serviceType }
+                    }));
+                }
             });
         });
     }

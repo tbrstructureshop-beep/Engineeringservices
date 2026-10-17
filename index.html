@@ -379,6 +379,16 @@
             });
 
             // --- 4. LOGIKA DYNAMIC IMPORT MENU ---
+            // Otomatis pindah ke menu Existing PN jika notifikasi diklik saat di menu lain
+            window.addEventListener('filter-ticket', (e) => {
+                if (e.detail && e.detail.serviceType === 'EXISTING_PN') {
+                    const navExisting = document.querySelector('[data-menu="existingPartNumber"]');
+                    if (navExisting && !navExisting.classList.contains('active')) {
+                        navExisting.click();
+                    }
+                }
+            });
+
             async function loadMenu(menuName, title) {
                 appContainer.innerHTML = `<div style="text-align:center; padding: 50px; color:var(--text-muted);"><i class="ph ph-spinner ph-spin" style="font-size: 2rem;"></i><p>Loading module...</p></div>`;
                 pageTitle.textContent = title;

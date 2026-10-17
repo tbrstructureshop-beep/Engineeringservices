@@ -1,5 +1,6 @@
 // File: config/Transaction/existingPN.js
 import { supabase } from '../user/supabaseClient.js';
+import { createNotification } from '../notification.js'; // Letakkan di paling atas existingPN.js
 
 // ============================================================================
 // 1. KONFIGURASI GOOGLE APPS SCRIPT WEB APP
@@ -195,6 +196,18 @@ export async function createTicketWithItems(header, arrayOfPns) {
         console.error('Gagal simpan header tiket ke Supabase:', headerErr);
         throw new Error('Supabase Header Error: ' + headerErr.message);
     }
+
+    // --- SISIPKAN NOTIFIKASI DI SINI ---
+    await createNotification({
+        serviceType: 'EXISTING_PN',
+        ticketNo: header.ticketNo,
+        senderName: header.requester,
+        senderUnit: header.department,
+        targetUnit: 'TED-2', // Ditujukan ke unit Admin penanggung jawab
+        title: 'New Existing PN Request',
+        message: `${header.department} (${header.requester}) Made Existing New PN Request with Ticket #${header.ticketNo}`
+    });
+    // -----------------------------------
 
     console.log('2. Header tiket berhasil disimpan. Memproses items & GDrive...');
 

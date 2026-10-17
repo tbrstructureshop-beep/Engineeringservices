@@ -157,9 +157,10 @@ export function openEntryModal(config) {
                 </div>
             </div>
             <div>
-                <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Timeline</div>
+                <div style="color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; font-weight: 600;">Timeline & Unit Tracking</div>
                 <div style="font-size: 0.8rem; color: var(--text-main); line-height: 1.3;">
-                    <div>Sub: <b>${config.headerData.createdAt ? new Date(config.headerData.createdAt).toLocaleDateString('id-ID') : 'Baru'}</b></div>
+                    <div>Sub by: <b>${config.headerData.department || '-'}</b> (${config.headerData.createdAt ? new Date(config.headerData.createdAt).toLocaleDateString('id-ID') : 'Baru'})</div>
+                    ${config.headerData.lastUpdatedByUnit ? `<div>Last edit: <b style="color:var(--primary);">${config.headerData.lastUpdatedByUnit}</b></div>` : ''}
                     ${config.headerData.closedAt ? `<div style="color:#10b981;">Closed: <b>${new Date(config.headerData.closedAt).toLocaleDateString('id-ID')}</b></div>` : ''}
                 </div>
             </div>
